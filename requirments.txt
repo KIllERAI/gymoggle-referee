@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: gymoggle-referee
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python server.py
