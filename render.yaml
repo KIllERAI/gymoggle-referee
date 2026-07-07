@@ -3,4 +3,4 @@ services:
     name: gymoggle-referee
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    startCommand: uvicorn logic.server:app --host 0.0.0.0 --port $PORT
