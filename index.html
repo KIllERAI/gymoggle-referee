@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>GymOggle — Squat Battles</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#0d0b14; --void2:#141020;
+    --you:#22e0d6; --opp:#ff2e7e; --gold:#ffd23f;
+    --bone:#f4f0ff; --dim:#6b6482; --line:#241d38;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:
+      radial-gradient(120% 80% at 0% 0%, rgba(34,224,214,.10), transparent 45%),
+      radial-gradient(120% 80% at 100% 100%, rgba(255,46,126,.12), transparent 45%),
+      var(--void);
+    color:var(--bone);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+    overflow:hidden;height:100vh;-webkit-user-select:none;user-select:none;
+  }
+  .screen{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+  .screen.on{display:flex;animation:fade .4s ease}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+
+  /* ===== LANDING ===== */
+  #landing .mark{
+    font-size:clamp(52px,14vw,138px);line-height:.86;text-align:center;
+    font-family:"Anton",system-ui,sans-serif;text-transform:uppercase;
+    background:linear-gradient(100deg,var(--you) 0%,var(--bone) 50%,var(--opp) 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  #landing .tag{margin-top:16px;color:var(--dim);font-size:clamp(12px,2.6vw,16px);letter-spacing:.16em;text-transform:uppercase;text-align:center}
+  .field{margin-top:30px;display:flex;flex-direction:column;align-items:center;gap:14px;width:min(340px,86vw)}
+  input{
+    width:100%;text-align:center;background:var(--void2);border:1px solid var(--line);
+    color:var(--bone);padding:14px;border-radius:12px;font-size:16px;letter-spacing:.04em;font-family:inherit;
+  }
+  input:focus{outline:none;border-color:var(--you)}
+  #joinCode{text-transform:uppercase;letter-spacing:.3em;font-family:"JetBrains Mono",monospace}
+  .btn{
+    width:100%;padding:16px;border:none;border-radius:14px;cursor:pointer;
+    font-family:"Anton";font-size:22px;letter-spacing:.05em;text-transform:uppercase;transition:transform .12s,filter .12s;
+  }
+  .btn:active{transform:scale(.98)}
+  .btn.primary{color:var(--void);background:linear-gradient(100deg,var(--you),var(--opp))}
+  .btn.primary:hover{filter:brightness(1.08)}
+  .btn:disabled{opacity:.55;cursor:progress;filter:grayscale(.3)}
+  .or{display:flex;align-items:center;gap:12px;width:100%;color:var(--dim);font-size:12px;letter-spacing:.2em;margin:4px 0}
+  .or i{flex:1;height:1px;background:var(--line)}
+  .joinrow{display:flex;gap:10px;width:100%}
+  .joinrow input{flex:1}
+  .btn.ghost{width:auto;padding:14px 22px;background:var(--void2);border:1px solid var(--line);color:var(--bone);font-size:16px}
+  .btn.ghost:hover{border-color:var(--you)}
+  .fineprint{margin-top:24px;color:var(--dim);font-size:12px;text-align:center;line-height:1.7;max-width:330px}
+
+  /* ===== GAME ===== */
+  #game{padding:0;justify-content:flex-start}
+  .stage{position:relative;width:100%;height:100%;overflow:hidden;background:#000}
+  #video,#overlay{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+  .stage::before,.stage::after{content:"";position:absolute;top:0;bottom:0;width:22%;pointer-events:none;z-index:2}
+  .stage::before{left:0;background:linear-gradient(90deg,rgba(34,224,214,.22),transparent)}
+  .stage::after{right:0;background:linear-gradient(270deg,rgba(255,46,126,.22),transparent)}
+  .hud{position:absolute;inset:0;z-index:4;pointer-events:none;display:flex;flex-direction:column}
+  .corners{display:flex;justify-content:space-between;padding:18px 20px}
+  .corner{display:flex;flex-direction:column}
+  .corner.r{align-items:flex-end}
+  .corner .who{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:2px}
+  .corner.l .who{color:var(--you)} .corner.r .who{color:var(--opp)}
+  .corner .score{font-family:"JetBrains Mono";font-weight:800;font-size:clamp(46px,13vw,84px);line-height:.9;font-variant-numeric:tabular-nums}
+  .corner.l .score{color:var(--you);text-shadow:0 0 24px rgba(34,224,214,.4)}
+  .corner.r .score{color:var(--opp);text-shadow:0 0 24px rgba(255,46,126,.4)}
+  .clockwrap{margin-top:auto;display:flex;flex-direction:column;align-items:center;padding-bottom:26px;gap:10px}
+  .clock{font-family:"JetBrains Mono";font-weight:800;font-size:clamp(30px,8vw,52px);font-variant-numeric:tabular-nums;
+    padding:6px 20px;border-radius:12px;background:rgba(13,11,20,.6);backdrop-filter:blur(6px)}
+  .clock.low{color:var(--opp);animation:pulse .6s ease infinite alternate}
+  @keyframes pulse{to{transform:scale(1.06)}}
+  .status{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--bone);
+    background:rgba(13,11,20,.6);padding:8px 16px;border-radius:20px;backdrop-filter:blur(6px)}
+  .status.warn{color:var(--opp)}
+  .center{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;pointer-events:none;padding:24px}
+  .center .box{text-align:center;pointer-events:auto}
+  .bigcount{font-family:"Anton";font-size:clamp(90px,30vw,220px);color:var(--bone);text-shadow:0 0 40px rgba(255,255,255,.3)}
+  .vsflash{font-family:"Anton";font-size:clamp(70px,22vw,180px);
+    background:linear-gradient(100deg,var(--you),var(--opp));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .spin{width:38px;height:38px;border:3px solid var(--line);border-top-color:var(--you);border-radius:50%;margin:0 auto 16px;animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .center p{color:var(--bone);letter-spacing:.12em;text-transform:uppercase;font-size:14px}
+  .center small{color:var(--dim);display:block;margin-top:8px;font-size:12px;letter-spacing:.04em;text-transform:none}
+  .codeshow{font-family:"JetBrains Mono";font-weight:800;font-size:clamp(52px,16vw,96px);letter-spacing:.16em;
+    color:var(--gold);margin:6px 0 4px;text-shadow:0 0 30px rgba(255,210,63,.35)}
+  .codelabel{color:var(--dim);font-size:12px;letter-spacing:.24em;text-transform:uppercase}
+  .center .btn{margin-top:20px;width:auto;padding:12px 26px;font-size:16px;background:var(--void2);border:1px solid var(--line);color:var(--bone)}
+
+  /* ===== RESULTS ===== */
+  #results{padding:0}
+  .rsplit{position:absolute;inset:0;display:flex}
+  .rside{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;transition:.5s;filter:grayscale(.7) brightness(.5)}
+  .rside.win{filter:none}
+  .rside.l{background:radial-gradient(120% 100% at 50% 40%,rgba(34,224,214,.16),transparent 70%)}
+  .rside.r{background:radial-gradient(120% 100% at 50% 40%,rgba(255,46,126,.16),transparent 70%)}
+  .rside .rwho{font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
+  .rside.l .rwho{color:var(--you)} .rside.r .rwho{color:var(--opp)}
+  .rside .rscore{font-family:"JetBrains Mono";font-weight:800;font-size:clamp(64px,20vw,150px);line-height:.9;font-variant-numeric:tabular-nums}
+  .rside.l .rscore{color:var(--you)} .rside.r .rscore{color:var(--opp)}
+  .rside .crown{font-size:30px;height:34px}
+  .verdict{position:absolute;left:0;right:0;top:8%;text-align:center;z-index:3;pointer-events:none}
+  .verdict .big{font-family:"Anton";font-size:clamp(48px,13vw,104px);text-transform:uppercase;text-shadow:0 4px 30px rgba(0,0,0,.5)}
+  .verdict .big.w{color:var(--gold)} .verdict .big.lose{color:var(--dim)} .verdict .big.tie{color:var(--bone)}
+  .again{position:absolute;left:50%;bottom:8%;transform:translateX(-50%);z-index:6;
+    padding:16px 40px;border:none;border-radius:14px;cursor:pointer;
+    font-family:"Anton";font-size:22px;letter-spacing:.06em;text-transform:uppercase;color:var(--void);background:var(--bone)}
+  .again:active{transform:translateX(-50%) scale(.97)}
+  .again:disabled{opacity:.6;cursor:progress}
+
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:20;
+    background:var(--void2);border:1px solid var(--line);color:var(--bone);
+    padding:12px 18px;border-radius:12px;font-size:13px;max-width:88vw;text-align:center;display:none}
+  .toast.on{display:block}
+</style>
+</head>
+<body>
+
+  <!-- ===== LANDING ===== -->
+  <section id="landing" class="screen on">
+    <h1 class="mark">GymOggle</h1>
+    <p class="tag">Battle a friend · 60 seconds · most squats wins</p>
+    <div class="field">
+      <input id="name" maxlength="12" placeholder="Enter a tag" autocomplete="off" />
+      <button id="createBtn" class="btn primary">Create game</button>
+      <div class="or"><i></i>OR<i></i></div>
+      <div class="joinrow">
+        <input id="joinCode" maxlength="4" placeholder="CODE" autocomplete="off" />
+        <button id="joinBtn" class="btn ghost">Join</button>
+      </div>
+    </div>
+    <p class="fineprint">Create a game to get a code, then share it with a friend.
+      Camera stays on your device — only your squat count is sent.</p>
+  </section>
+
+  <!-- ===== GAME ===== -->
+  <section id="game" class="screen">
+    <div class="stage">
+      <video id="video" playsinline muted></video>
+      <canvas id="overlay"></canvas>
+      <div class="hud">
+        <div class="corners">
+          <div class="corner l"><span class="who" id="youName">You</span><span class="score" id="youScore">0</span></div>
+          <div class="corner r"><span class="who">Opponent</span><span class="score" id="oppScore">0</span></div>
+        </div>
+        <div class="clockwrap">
+          <div class="clock mono" id="clock">1:00</div>
+          <div class="status" id="status">Connecting…</div>
+        </div>
+      </div>
+      <div class="center" id="center"></div>
+    </div>
+  </section>
+
+  <!-- ===== RESULTS ===== -->
+  <section id="results" class="screen">
+    <div class="rsplit">
+      <div class="rside l" id="rYou"><div class="crown" id="crownYou"></div><span class="rwho" id="rYouName">You</span><span class="rscore" id="rYouScore">0</span></div>
+      <div class="rside r" id="rOpp"><div class="crown" id="crownOpp"></div><span class="rwho">Opponent</span><span class="rscore" id="rOppScore">0</span></div>
+    </div>
+    <div class="verdict"><div class="big" id="verdict">—</div></div>
+    <button class="again" id="againBtn">Play again</button>
+  </section>
+
+  <div class="toast" id="toast"></div>
+
+<script type="module">
+import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
+
+/* ============================================================
+   CONFIG — set this to your Render referee URL.
+   Must be wss:// (page is served over https).
+   Override for testing with ?server=wss://...
+   ============================================================ */
+const DEFAULT_SERVER = "wss://https://gymoggle-referee.onrender.com";
+const params = new URLSearchParams(location.search);
+const SERVER_URL = params.get("server") || DEFAULT_SERVER;
+
+const $ = id => document.getElementById(id);
+const screens = { landing:$("landing"), game:$("game"), results:$("results") };
+function show(name){ for(const k in screens) screens[k].classList.toggle("on", k===name); }
+
+const video=$("video"), overlay=$("overlay"), octx=overlay.getContext("2d");
+const youScoreEl=$("youScore"), oppScoreEl=$("oppScore");
+const clockEl=$("clock"), statusEl=$("status"), centerEl=$("center");
+
+const S = { me:null, myReps:0, oppReps:0, active:false, duration:60, startTs:0,
+            phase:"idle", winner:null, name:"You", intent:null, code:null };
+const other = p => p==="P1" ? "P2" : "P1";
+
+/* ---------- rep detection (ported from Python) ---------- */
+function angle(a,b,c){
+  const rad = Math.atan2(c.y-b.y, c.x-b.x) - Math.atan2(a.y-b.y, a.x-b.x);
+  let deg = Math.abs(rad*180/Math.PI);
+  if(deg>180) deg = 360-deg;
+  return deg;
+}
+let stage="up", flash=0;
+const vis = lm => (lm.visibility==null ? 1 : lm.visibility);
+function processPose(lms){
+  const lHip=lms[23],lKnee=lms[25],lAnk=lms[27];
+  const rHip=lms[24],rKnee=lms[26],rAnk=lms[28];
+  const minVis = Math.min(vis(lHip),vis(lKnee),vis(lAnk),vis(rHip),vis(rKnee),vis(rAnk));
+  if(minVis < 0.6){ if(S.active) setStatus("Step back — legs not in frame",true); return {legs:false,down:false}; }
+  const la=angle(lHip,lKnee,lAnk), ra=angle(rHip,rKnee,rAnk);
+  let down=false;
+  if(Math.max(la,ra) < 100){ stage="down"; down=true; }
+  if(Math.min(la,ra) > 160 && stage==="down"){
+    stage="up"; flash=8;
+    if(S.active){ S.myReps++; youScoreEl.textContent=S.myReps; pushReps(); }
+  }
+  return {legs:true,down};
+}
+
+/* ---------- model + camera ---------- */
+let landmarker=null, camStarted=false;
+async function initModel(){
+  const fileset = await FilesetResolver.forVisionTasks(
+    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
+  landmarker = await PoseLandmarker.createFromOptions(fileset,{
+    baseOptions:{
+      modelAssetPath:"https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+      delegate:"GPU"
+    },
+    runningMode:"VIDEO", numPoses:1
+  });
+}
+async function initCamera(){
+  if(camStarted) return;
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video:{ facingMode:"user", width:{ideal:960}, height:{ideal:720} }, audio:false });
+  video.srcObject = stream;
+  await video.play();
+  overlay.width=video.videoWidth; overlay.height=video.videoHeight;
+  camStarted=true;
+}
+
+/* ---------- detection loop ---------- */
+let lastTs=-1, looping=false;
+function loop(){
+  if(landmarker && video.readyState>=2){
+    const ts=performance.now();
+    if(ts!==lastTs){
+      lastTs=ts;
+      const res=landmarker.detectForVideo(video,ts);
+      octx.clearRect(0,0,overlay.width,overlay.height);
+      if(res.landmarks && res.landmarks.length){
+        const lms=res.landmarks[0];
+        const {down}=processPose(lms);
+        drawLegs(lms, flash>0 ? "#ffffff" : (down? "#ff2e7e":"#22e0d6"));
+        if(flash>0) flash--;
+      }
+    }
+  }
+  requestAnimationFrame(loop);
+}
+function drawLegs(lms,color){
+  const pts=[23,25,27,24,26,28];
+  const conn=[[23,25],[25,27],[24,26],[26,28],[23,24]];
+  octx.save(); octx.strokeStyle=color; octx.fillStyle=color; octx.lineWidth=4;
+  for(const [a,b] of conn){ if(vis(lms[a])>0.5 && vis(lms[b])>0.5){
+    octx.beginPath();
+    octx.moveTo(lms[a].x*overlay.width, lms[a].y*overlay.height);
+    octx.lineTo(lms[b].x*overlay.width, lms[b].y*overlay.height); octx.stroke(); } }
+  for(const i of pts){ if(vis(lms[i])>0.5){
+    octx.beginPath(); octx.arc(lms[i].x*overlay.width, lms[i].y*overlay.height,6,0,7); octx.fill(); } }
+  octx.restore();
+}
+
+/* ---------- networking ---------- */
+let ws=null;
+function connect(){
+  try{ ws=new WebSocket(SERVER_URL); }
+  catch(e){ setStatus("Bad server address",true); return; }
+
+  ws.onopen = ()=>{
+    if(S.intent==="create") ws.send(JSON.stringify({type:"create"}));
+    else if(S.intent==="join") ws.send(JSON.stringify({type:"join", code:S.code}));
+  };
+  ws.onmessage = ev=>{
+    const d=JSON.parse(ev.data), t=d.type;
+    if(t==="created"){ S.me=d.you; S.code=d.code; showShareCode(d.code); }
+    else if(t==="joined"){ S.me=d.you; S.code=d.code; centerWait("Joining…","Getting you into the match"); }
+    else if(t==="opponent_here"){ /* match start message follows */ }
+    else if(t==="start"){ show("game"); startMatch(d.duration); }
+    else if(t==="scores"){ const sc=d.scores; if(S.me && other(S.me) in sc){ S.oppReps=sc[other(S.me)]; oppScoreEl.textContent=S.oppReps; } }
+    else if(t==="end"){ const sc=d.scores; if(S.me && other(S.me) in sc) S.oppReps=sc[other(S.me)]; endMatch(d.winner); }
+    else if(t==="rematch_wait"){ const b=$("againBtn"); b.disabled=true; b.textContent="Waiting for opponent…"; }
+    else if(t==="opponent_left"){ opponentLeft(); }
+    else if(t==="error"){
+      if(d.reason==="no_room") toast("No game with that code.");
+      else if(d.reason==="room_full") toast("That game is already full.");
+      else toast("Couldn't join.");
+      backToLanding();
+    }
+  };
+  ws.onerror = ()=> setStatus("Can't reach referee — check the server URL",true);
+  ws.onclose = ()=>{ if(S.phase==="playing") toast("Connection dropped"); };
+}
+let lastSent=-1;
+function pushReps(){
+  if(ws && ws.readyState===1 && S.active && S.myReps!==lastSent){
+    lastSent=S.myReps; ws.send(JSON.stringify({type:"reps", reps:S.myReps}));
+  }
+}
+
+/* ---------- center-screen states ---------- */
+function setStatus(txt,warn=false){ statusEl.textContent=txt; statusEl.classList.toggle("warn",warn); }
+function centerWait(title, sub){
+  centerEl.innerHTML=`<div class="box"><div class="spin"></div><p>${title}</p><small>${sub||""}</small></div>`;
+}
+function showShareCode(code){
+  centerEl.innerHTML=`<div class="box"><div class="codelabel">Share this code</div>
+    <div class="codeshow">${code}</div>
+    <small>Waiting for your friend to join…</small>
+    <button class="btn" id="copyBtn">Copy code</button></div>`;
+  setStatus("Room ready");
+  const c=$("copyBtn");
+  if(c) c.addEventListener("click",()=>{ navigator.clipboard?.writeText(code); toast("Code copied"); });
+}
+
+/* ---------- match flow ---------- */
+function startMatch(duration){
+  S.duration=duration||60; S.startTs=performance.now()/1000;
+  S.myReps=0; S.oppReps=0; lastSent=-1;
+  youScoreEl.textContent="0"; oppScoreEl.textContent="0";
+  S.phase="playing";
+  centerEl.innerHTML='<div class="box"><div class="vsflash">VS</div></div>';
+  setTimeout(()=>{ centerEl.innerHTML='<div class="box"><div class="bigcount">GO</div></div>';
+    setTimeout(()=>{ centerEl.innerHTML=""; S.active=true; }, 600); }, 800);
+  setStatus("Match on"); tick();
+}
+function tick(){
+  if(S.phase!=="playing") return;
+  const remaining=Math.max(0, S.duration-(performance.now()/1000 - S.startTs));
+  const m=Math.floor(remaining/60), s=Math.floor(remaining%60);
+  clockEl.textContent=`${m}:${String(s).padStart(2,"0")}`;
+  clockEl.classList.toggle("low", remaining<=10 && S.active);
+  if(remaining<=0) S.active=false;
+  requestAnimationFrame(tick);
+}
+function endMatch(winner){
+  S.active=false; S.phase="done"; S.winner=winner;
+  $("rYouName").textContent=S.name;
+  $("rYouScore").textContent=S.myReps; $("rOppScore").textContent=S.oppReps;
+  const iWon=winner===S.me, tie=winner==="TIE";
+  const v=$("verdict");
+  v.textContent=tie?"Draw":(iWon?"You win":"You lose");
+  v.className="big "+(tie?"tie":(iWon?"w":"lose"));
+  $("rYou").classList.toggle("win", iWon||tie);
+  $("rOpp").classList.toggle("win", (!iWon&&!tie)||tie);
+  $("crownYou").textContent=iWon?"👑":"";
+  $("crownOpp").textContent=(!iWon&&!tie)?"👑":"";
+  const b=$("againBtn"); b.disabled=false; b.textContent="Play again";
+  show("results");
+}
+function opponentLeft(){
+  toast("Your opponent left the game.");
+  backToLanding();
+}
+function backToLanding(){
+  S.phase="idle"; S.me=null; S.code=null; S.intent=null;
+  try{ if(ws) ws.close(); }catch(e){}
+  centerEl.innerHTML=""; clockEl.textContent="1:00"; clockEl.classList.remove("low");
+  $("createBtn").disabled=false; $("createBtn").textContent="Create game";
+  $("joinBtn").disabled=false; $("joinBtn").textContent="Join";
+  show("landing");
+}
+
+/* ---------- entry ---------- */
+async function enterGame(intent, code){
+  S.name=($("name").value.trim()||"You").slice(0,12);
+  $("youName").textContent=S.name;
+  const cbtn=$("createBtn"), jbtn=$("joinBtn");
+  cbtn.disabled=true; jbtn.disabled=true;
+  (intent==="create"?cbtn:jbtn).textContent="Loading…";
+  try{
+    if(!landmarker) await initModel();
+    await initCamera();
+  }catch(e){
+    cbtn.disabled=false; jbtn.disabled=false; cbtn.textContent="Create game"; jbtn.textContent="Join";
+    toast(e.name==="NotAllowedError" ? "Camera blocked — allow access and try again." : "Couldn't start camera/model. "+e.message);
+    return;
+  }
+  S.intent=intent; S.code=code;
+  show("game");
+  if(!looping){ looping=true; loop(); }
+  centerWait(intent==="create"?"Creating game…":"Joining…","");
+  if(SERVER_URL.includes("YOUR-APP")){ setStatus("Set your server URL",true); centerWait("Server not set","Edit SERVER_URL in the file, then reload."); return; }
+  connect();
+}
+
+$("createBtn").addEventListener("click", ()=> enterGame("create", null));
+$("joinBtn").addEventListener("click", ()=>{
+  const code=$("joinCode").value.trim().toUpperCase();
+  if(code.length<4){ toast("Enter the 4-character code."); return; }
+  enterGame("join", code);
+});
+$("joinCode").addEventListener("input", e=>{ e.target.value=e.target.value.toUpperCase(); });
+$("againBtn").addEventListener("click", ()=>{
+  const b=$("againBtn"); b.disabled=true; b.textContent="Waiting for opponent…";
+  if(ws && ws.readyState===1) ws.send(JSON.stringify({type:"rematch"}));
+});
+
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("on"); setTimeout(()=>t.classList.remove("on"),4000); }
+</script>
+</body>
+</html>
