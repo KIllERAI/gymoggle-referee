@@ -78,7 +78,7 @@ import json
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 import uvicorn
 
-DURATION = 20
+DURATION = 60
 
 app = FastAPI()
 

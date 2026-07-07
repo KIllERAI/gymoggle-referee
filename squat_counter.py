@@ -217,8 +217,8 @@ import websockets
 
 # ---- CHANGE THIS for two laptops: use the referee laptop's LAN IP, e.g. "ws://192.168.1.42:8765" ----
 # SERVER = "ws://localhost:8765"
-SERVER = "ws://192.168.56.1:8765"   # <-- change this to the referee's IP address
-
+# SERVER = "ws://192.168.56.1"
+SERVER = "wss://gymoggle-referee.onrender.com"
 mp_pose = mp.solutions.pose
 mp_draw = mp.solutions.drawing_utils
 
