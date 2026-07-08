@@ -58,6 +58,11 @@
   .joinrow input{flex:1}
   .btn.ghost{width:auto;padding:14px 22px;background:var(--void2);border:1px solid var(--line);color:var(--bone);font-size:16px}
   .btn.ghost:hover{border-color:var(--you)}
+  .exsel{display:flex;gap:8px;width:100%;margin-bottom:2px}
+  .ex{flex:1;padding:11px 4px;border:1px solid var(--line);background:var(--void2);color:var(--dim);
+    border-radius:10px;cursor:pointer;font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-family:inherit;transition:.15s}
+  .ex.on{border-color:var(--you);color:var(--bone);background:rgba(34,224,214,.12)}
+  .exlabel{color:var(--dim);font-size:11px;letter-spacing:.22em;text-transform:uppercase;margin-bottom:-4px}
   .fineprint{margin-top:24px;color:var(--dim);font-size:12px;text-align:center;line-height:1.7;max-width:330px}
 
   /* ===== GAME ===== */
@@ -141,6 +146,12 @@
     <p class="tag">Battle a friend · 60 seconds · most squats wins</p>
     <div class="field">
       <input id="name" maxlength="12" placeholder="Enter a tag" autocomplete="off" />
+      <div class="exlabel">Pick your battle</div>
+      <div class="exsel">
+        <button class="ex on" data-ex="squats">Squats</button>
+        <button class="ex" data-ex="pushups">Push-ups</button>
+        <button class="ex" data-ex="situps">Sit-ups</button>
+      </div>
       <button id="createBtn" class="btn primary">Create game</button>
       <div class="or"><i></i>OR<i></i></div>
       <div class="joinrow">
@@ -206,7 +217,8 @@ const youScoreEl=$("youScore"), oppScoreEl=$("oppScore");
 const clockEl=$("clock"), statusEl=$("status"), centerEl=$("center");
 
 const S = { me:null, myReps:0, oppReps:0, active:false, duration:60, startTs:0,
-            phase:"idle", winner:null, name:"You", intent:null, code:null };
+            phase:"idle", winner:null, name:"You", intent:null, code:null, exercise:"squats" };
+let chosenExercise = "squats";   // creator's pick on the landing screen
 const other = p => p==="P1" ? "P2" : "P1";
 
 /* ============================================================
@@ -286,15 +298,58 @@ function angle(a,b,c){
 }
 let stage="up", flash=0;
 const vis = lm => (lm.visibility==null ? 1 : lm.visibility);
+
+/* ---- Per-exercise detection. Each measure() returns:
+   {ok:false}                       -> body not framed well enough
+   {ok:true, down:bool, up:bool, draw:[[a,b],...]}   -> current pose state
+   "down"=the flexed/bottom position, "up"=the extended/top position.
+   Tune the angle thresholds below per exercise if counts feel off. ---- */
+const EXERCISES = {
+  squats: {
+    label:"Squats", warn:"Step back — legs not in frame",
+    measure(lms){
+      const need=[23,25,27,24,26,28];
+      if(Math.min(...need.map(i=>vis(lms[i]))) < 0.6) return {ok:false};
+      const la=angle(lms[23],lms[25],lms[27]);   // left  hip-knee-ankle
+      const ra=angle(lms[24],lms[26],lms[28]);   // right hip-knee-ankle
+      return {ok:true, down:Math.max(la,ra)<100, up:Math.min(la,ra)>160,
+              draw:[[23,25],[25,27],[24,26],[26,28],[23,24]]};
+    }
+  },
+  pushups: {
+    label:"Push-ups", warn:"Side-on — get your whole body in frame",
+    measure(lms){
+      // use whichever arm is more clearly visible (shoulder-elbow-wrist)
+      const arms=[[11,13,15],[12,14,16]];
+      let best=null,bv=-1;
+      for(const a of arms){ const v=Math.min(vis(lms[a[0]]),vis(lms[a[1]]),vis(lms[a[2]])); if(v>bv){bv=v;best=a;} }
+      if(bv<0.5) return {ok:false};
+      const [s,e,w]=best;
+      const ang=angle(lms[s],lms[e],lms[w]);     // elbow angle
+      return {ok:true, down:ang<95, up:ang>155, draw:[[s,e],[e,w]]};
+    }
+  },
+  situps: {
+    label:"Sit-ups", warn:"Side-on, lying down — full body in frame",
+    measure(lms){
+      // torso angle shoulder-hip-knee, best side; small=sat up, large=lying
+      const sides=[[11,23,25],[12,24,26]];
+      let best=null,bv=-1;
+      for(const a of sides){ const v=Math.min(vis(lms[a[0]]),vis(lms[a[1]]),vis(lms[a[2]])); if(v>bv){bv=v;best=a;} }
+      if(bv<0.5) return {ok:false};
+      const [s,h,k]=best;
+      const ang=angle(lms[s],lms[h],lms[k]);
+      return {ok:true, down:ang>130, up:ang<80, draw:[[s,h],[h,k]]};
+    }
+  }
+};
+
 function processPose(lms){
-  const lHip=lms[23],lKnee=lms[25],lAnk=lms[27];
-  const rHip=lms[24],rKnee=lms[26],rAnk=lms[28];
-  const minVis = Math.min(vis(lHip),vis(lKnee),vis(lAnk),vis(rHip),vis(rKnee),vis(rAnk));
-  if(minVis < 0.6){ if(S.active) setStatus("Step back — legs not in frame",true); return {legs:false,down:false}; }
-  const la=angle(lHip,lKnee,lAnk), ra=angle(rHip,rKnee,rAnk);
-  let down=false;
-  if(Math.max(la,ra) < 100){ stage="down"; down=true; }
-  if(Math.min(la,ra) > 160 && stage==="down"){
+  const cfg = EXERCISES[S.exercise] || EXERCISES.squats;
+  const m = cfg.measure(lms);
+  if(!m.ok){ if(S.active) setStatus(cfg.warn,true); return {down:false, draw:null}; }
+  if(m.down){ stage="down"; }
+  if(m.up && stage==="down"){
     stage="up"; flash=8;
     if(S.active){
       S.myReps++; youScoreEl.textContent=S.myReps; pushReps();
@@ -303,7 +358,7 @@ function processPose(lms){
       setTimeout(()=>youScoreEl.style.transform="scale(1)",90);
     }
   }
-  return {legs:true,down};
+  return {down:m.down, draw:m.draw};
 }
 
 /* ---------- model + camera ---------- */
@@ -340,22 +395,22 @@ function loop(){
       octx.clearRect(0,0,overlay.width,overlay.height);
       if(res.landmarks && res.landmarks.length){
         const lms=res.landmarks[0];
-        const {down}=processPose(lms);
-        drawLegs(lms, flash>0 ? "#ffffff" : (down? "#ff2e7e":"#22e0d6"));
+        const {down,draw}=processPose(lms);
+        drawPose(lms, draw||[], flash>0 ? "#ffffff" : (down? "#ff2e7e":"#22e0d6"));
         if(flash>0) flash--;
       }
     }
   }
   requestAnimationFrame(loop);
 }
-function drawLegs(lms,color){
-  const pts=[23,25,27,24,26,28];
-  const conn=[[23,25],[25,27],[24,26],[26,28],[23,24]];
+function drawPose(lms,conns,color){
   octx.save(); octx.strokeStyle=color; octx.fillStyle=color; octx.lineWidth=4;
-  for(const [a,b] of conn){ if(vis(lms[a])>0.5 && vis(lms[b])>0.5){
-    octx.beginPath();
-    octx.moveTo(lms[a].x*overlay.width, lms[a].y*overlay.height);
-    octx.lineTo(lms[b].x*overlay.width, lms[b].y*overlay.height); octx.stroke(); } }
+  const pts=new Set();
+  for(const [a,b] of conns){ pts.add(a); pts.add(b);
+    if(vis(lms[a])>0.5 && vis(lms[b])>0.5){
+      octx.beginPath();
+      octx.moveTo(lms[a].x*overlay.width, lms[a].y*overlay.height);
+      octx.lineTo(lms[b].x*overlay.width, lms[b].y*overlay.height); octx.stroke(); } }
   for(const i of pts){ if(vis(lms[i])>0.5){
     octx.beginPath(); octx.arc(lms[i].x*overlay.width, lms[i].y*overlay.height,6,0,7); octx.fill(); } }
   octx.restore();
@@ -368,15 +423,16 @@ function connect(){
   catch(e){ setStatus("Bad server address",true); return; }
 
   ws.onopen = ()=>{
-    if(S.intent==="create") ws.send(JSON.stringify({type:"create"}));
+    if(S.intent==="create") ws.send(JSON.stringify({type:"create", exercise:chosenExercise}));
     else if(S.intent==="join") ws.send(JSON.stringify({type:"join", code:S.code}));
   };
   ws.onmessage = ev=>{
     const d=JSON.parse(ev.data), t=d.type;
-    if(t==="created"){ S.me=d.you; S.code=d.code; showShareCode(d.code); }
-    else if(t==="joined"){ S.me=d.you; S.code=d.code; centerWait("Joining…","Getting you into the match"); }
+    if(t==="created"){ S.me=d.you; S.code=d.code; if(d.exercise) S.exercise=d.exercise; showShareCode(d.code); }
+    else if(t==="joined"){ S.me=d.you; S.code=d.code; if(d.exercise) S.exercise=d.exercise;
+      centerWait("Joining "+exLabel()+" battle…","Getting you into the match"); }
     else if(t==="opponent_here"){ /* start follows */ }
-    else if(t==="start"){ show("game"); startMatch(d.duration); }
+    else if(t==="start"){ if(d.exercise) S.exercise=d.exercise; show("game"); startMatch(d.duration); }
     else if(t==="scores"){ const sc=d.scores; if(S.me && other(S.me) in sc){ S.oppReps=sc[other(S.me)]; oppScoreEl.textContent=S.oppReps; } }
     else if(t==="end"){ const sc=d.scores; if(S.me && other(S.me) in sc) S.oppReps=sc[other(S.me)]; endMatch(d.winner); }
     else if(t==="rematch_pending"){ setAgain("pending"); }
@@ -401,11 +457,12 @@ function pushReps(){
 
 /* ---------- center-screen states ---------- */
 function setStatus(txt,warn=false){ statusEl.textContent=txt; statusEl.classList.toggle("warn",warn); }
+function exLabel(){ return (EXERCISES[S.exercise]||EXERCISES.squats).label; }
 function centerWait(title, sub){
   centerEl.innerHTML=`<div class="box"><div class="spin"></div><p>${title}</p><small>${sub||""}</small></div>`;
 }
 function showShareCode(code){
-  centerEl.innerHTML=`<div class="box"><div class="codelabel">Share this code</div>
+  centerEl.innerHTML=`<div class="box"><div class="codelabel">${exLabel()} · share this code</div>
     <div class="codeshow">${code}</div>
     <small>Waiting for your friend to join…</small>
     <button class="btn" id="copyBtn">Copy code</button></div>`;
@@ -429,7 +486,7 @@ function runCountdown(){
   const seq=[["3",440],["2",440],["1",440],["GO",800]];
   let i=0;
   (function step(){
-    if(i>=seq.length){ centerEl.innerHTML=""; S.active=true; setStatus("Match on"); startCrowd(); return; }
+    if(i>=seq.length){ centerEl.innerHTML=""; S.active=true; setStatus(exLabel()+" — go!"); startCrowd(); return; }
     const [n,f]=seq[i++];
     centerEl.innerHTML=`<div class="box"><div class="bigcount">${n}</div></div>`;
     beep(f, n==="GO"?0.34:0.14, n==="GO"?"sawtooth":"square", 0.28);
@@ -511,6 +568,14 @@ async function enterGame(intent, code){
   if(SERVER_URL.includes("YOUR-APP")){ setStatus("Set your server URL",true); centerWait("Server not set","Edit SERVER_URL in the file, then reload."); return; }
   connect();
 }
+
+document.querySelectorAll(".ex").forEach(b=>{
+  b.addEventListener("click",()=>{
+    document.querySelectorAll(".ex").forEach(x=>x.classList.remove("on"));
+    b.classList.add("on");
+    chosenExercise=b.dataset.ex;
+  });
+});
 
 $("createBtn").addEventListener("click", ()=> enterGame("create", null));
 $("joinBtn").addEventListener("click", ()=>{
