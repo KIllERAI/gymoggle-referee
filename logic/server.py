@@ -576,6 +576,197 @@
 
 # if __name__ == "__main__":
 #     uvicorn.run("server:app", host="0.0.0.0", port=8000)
+# TEST 5----------------------------
+# import asyncio
+# import json
+# import random
+# from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+# import uvicorn
+
+# DURATION = 35
+# # Code alphabet with no easily-confused characters (no O/0, I/1)
+# CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+# CODE_LEN = 4
+
+# app = FastAPI()
+
+# # rooms: code -> {
+# #   "players": { websocket: {"id": "P1"/"P2", "reps": int, "ready": bool} },
+# #   "started": bool,
+# #   "task": asyncio.Task | None
+# # }
+# rooms = {}
+
+
+# def new_code():
+#     while True:
+#         c = "".join(random.choice(CODE_ALPHABET) for _ in range(CODE_LEN))
+#         if c not in rooms:
+#             return c
+
+
+# async def send(ws, payload):
+#     try:
+#         await ws.send_text(json.dumps(payload))
+#     except Exception:
+#         pass
+
+
+# async def broadcast(room, payload):
+#     await asyncio.gather(
+#         *[send(ws, payload) for ws in list(room["players"].keys())],
+#         return_exceptions=True,
+#     )
+
+
+# def scores(room):
+#     return {p["id"]: p["reps"] for p in room["players"].values()}
+
+
+# async def run_match(code):
+#     room = rooms.get(code)
+#     if not room:
+#         return
+
+#     room["started"] = True
+#     for p in room["players"].values():
+#         p["reps"] = 0
+#         p["ready"] = False
+
+#     print(f"[{code}] match starting")
+#     await broadcast(room, {"type": "start", "duration": DURATION,
+#                            "exercise": room.get("exercise", "squats")})
+
+#     await asyncio.sleep(DURATION)
+
+#     room = rooms.get(code)          # may have been torn down while we slept
+#     if not room:
+#         return
+
+#     s = scores(room)
+#     if len(s) == 2:
+#         p1, p2 = s.get("P1", 0), s.get("P2", 0)
+#         winner = "TIE" if p1 == p2 else ("P1" if p1 > p2 else "P2")
+#     else:
+#         winner = "TIE"
+
+#     print(f"[{code}] match over {s} winner={winner}")
+#     await broadcast(room, {"type": "end", "winner": winner, "scores": s})
+#     room["started"] = False
+#     room["task"] = None
+
+
+# async def try_start(code):
+#     room = rooms.get(code)
+#     if room and len(room["players"]) == 2 and not room["started"]:
+#         room["task"] = asyncio.create_task(run_match(code))
+
+
+# @app.websocket("/")
+# async def referee(ws: WebSocket):
+#     await ws.accept()
+#     code = None                     # which room this socket belongs to
+
+#     try:
+#         while True:
+#             raw = await ws.receive_text()
+#             data = json.loads(raw)
+#             t = data.get("type")
+
+#             # ---- create a private room ----
+#             if t == "create":
+#                 if code:
+#                     continue        # already in a room
+#                 code = new_code()
+#                 exercise = data.get("exercise", "squats")
+#                 rooms[code] = {
+#                     "players": {ws: {"id": "P1", "reps": 0, "ready": False}},
+#                     "started": False,
+#                     "task": None,
+#                     "exercise": exercise,
+#                 }
+#                 await send(ws, {"type": "created", "code": code, "you": "P1", "exercise": exercise})
+#                 print(f"[{code}] created ({exercise})")
+
+#             # ---- join a room by code ----
+#             elif t == "join":
+#                 want = (data.get("code") or "").strip().upper()
+#                 room = rooms.get(want)
+#                 if not room:
+#                     await send(ws, {"type": "error", "reason": "no_room"})
+#                 elif len(room["players"]) >= 2:
+#                     await send(ws, {"type": "error", "reason": "room_full"})
+#                 else:
+#                     code = want
+#                     room["players"][ws] = {"id": "P2", "reps": 0, "ready": False}
+#                     await send(ws, {"type": "joined", "you": "P2", "code": code,
+#                                     "exercise": room.get("exercise", "squats")})
+#                     await broadcast(room, {"type": "opponent_here"})
+#                     print(f"[{code}] P2 joined")
+#                     await try_start(code)
+
+#             # ---- live rep updates ----
+#             elif t == "reps":
+#                 if code and code in rooms and ws in rooms[code]["players"]:
+#                     rooms[code]["players"][ws]["reps"] = int(data.get("reps", 0))
+#                     await broadcast(rooms[code],
+#                                     {"type": "scores", "scores": scores(rooms[code])})
+
+#             # ---- rematch: both must ask before it restarts ----
+#             elif t == "rematch":
+#                 if code and code in rooms and ws in rooms[code]["players"]:
+#                     room = rooms[code]
+#                     room["players"][ws]["ready"] = True
+#                     both_ready = (len(room["players"]) == 2 and
+#                                   all(p["ready"] for p in room["players"].values()))
+#                     if both_ready:
+#                         await try_start(code)
+#                     else:
+#                         # tell the requester they're waiting, and tell the
+#                         # opponent that a rematch has been offered
+#                         for w in room["players"]:
+#                             if w is ws:
+#                                 await send(w, {"type": "rematch_pending"})
+#                             else:
+#                                 await send(w, {"type": "rematch_offer"})
+
+#     except WebSocketDisconnect:
+#         pass
+#     except Exception as e:
+#         print("socket error:", e)
+
+#     finally:
+#         # clean up this player's room membership
+#         if code and code in rooms and ws in rooms[code]["players"]:
+#             pid = rooms[code]["players"][ws]["id"]
+#             del rooms[code]["players"][ws]
+#             print(f"[{code}] {pid} left")
+
+#             if rooms[code]["players"]:
+#                 # someone's still here — tell them, stop any running match
+#                 task = rooms[code].get("task")
+#                 if task:
+#                     task.cancel()
+#                 rooms[code]["started"] = False
+#                 for p in rooms[code]["players"].values():
+#                     p["ready"] = False
+#                 await broadcast(rooms[code], {"type": "opponent_left"})
+#             else:
+#                 # empty room — delete it
+#                 task = rooms[code].get("task")
+#                 if task:
+#                     task.cancel()
+#                 del rooms[code]
+#                 print(f"[{code}] closed")
+
+
+# @app.get("/")
+# async def root():
+#     return {"status": "GymOggle Referee Running", "rooms": len(rooms)}
+
+
+# if __name__ == "__main__":
+#     uvicorn.run("server:app", host="0.0.0.0", port=8000)
 import asyncio
 import json
 import random
@@ -661,10 +852,52 @@ async def try_start(code):
         room["task"] = asyncio.create_task(run_match(code))
 
 
+waiting = {}   # exercise -> list of websockets waiting for a random match
+
+
+def room_of(ws):
+    for c, room in rooms.items():
+        if ws in room["players"]:
+            return c, room
+    return None, None
+
+
+def enqueue(ws, exercise):
+    waiting.setdefault(exercise, []).append(ws)
+
+
+def dequeue(ws):
+    for lst in waiting.values():
+        if ws in lst:
+            lst.remove(ws)
+
+
+async def leave_room(ws):
+    """Remove a player from the matchmaking queue and/or their room,
+    and notify the opponent. Safe to call on explicit leave or disconnect."""
+    dequeue(ws)
+    c, room = room_of(ws)
+    if not room:
+        return
+    pid = room["players"][ws]["id"]
+    del room["players"][ws]
+    print(f"[{c}] {pid} left")
+    task = room.get("task")
+    if task:
+        task.cancel()
+    if room["players"]:
+        room["started"] = False
+        for p in room["players"].values():
+            p["ready"] = False
+        await broadcast(room, {"type": "opponent_left"})
+    else:
+        del rooms[c]
+        print(f"[{c}] closed")
+
+
 @app.websocket("/")
 async def referee(ws: WebSocket):
     await ws.accept()
-    code = None                     # which room this socket belongs to
 
     try:
         while True:
@@ -674,8 +907,8 @@ async def referee(ws: WebSocket):
 
             # ---- create a private room ----
             if t == "create":
-                if code:
-                    continue        # already in a room
+                if room_of(ws)[1]:
+                    continue
                 code = new_code()
                 exercise = data.get("exercise", "squats")
                 rooms[code] = {
@@ -687,7 +920,7 @@ async def referee(ws: WebSocket):
                 await send(ws, {"type": "created", "code": code, "you": "P1", "exercise": exercise})
                 print(f"[{code}] created ({exercise})")
 
-            # ---- join a room by code ----
+            # ---- join a private room by code ----
             elif t == "join":
                 want = (data.get("code") or "").strip().upper()
                 room = rooms.get(want)
@@ -696,38 +929,75 @@ async def referee(ws: WebSocket):
                 elif len(room["players"]) >= 2:
                     await send(ws, {"type": "error", "reason": "room_full"})
                 else:
-                    code = want
                     room["players"][ws] = {"id": "P2", "reps": 0, "ready": False}
-                    await send(ws, {"type": "joined", "you": "P2", "code": code,
+                    await send(ws, {"type": "joined", "you": "P2", "code": want,
                                     "exercise": room.get("exercise", "squats")})
                     await broadcast(room, {"type": "opponent_here"})
-                    print(f"[{code}] P2 joined")
+                    print(f"[{want}] P2 joined")
+                    await try_start(want)
+
+            # ---- quick match: pair with a waiting stranger (same exercise) ----
+            elif t == "quick":
+                if room_of(ws)[1]:
+                    continue
+                exercise = data.get("exercise", "squats")
+                dequeue(ws)                       # never queue the same socket twice
+                q = waiting.get(exercise, [])
+                opponent = None
+                while q:                          # find a still-waiting opponent
+                    cand = q.pop(0)
+                    if cand is not ws:
+                        opponent = cand
+                        break
+                if opponent is not None:
+                    code = new_code()
+                    rooms[code] = {
+                        "players": {opponent: {"id": "P1", "reps": 0, "ready": False},
+                                    ws:       {"id": "P2", "reps": 0, "ready": False}},
+                        "started": False,
+                        "task": None,
+                        "exercise": exercise,
+                    }
+                    await send(opponent, {"type": "matched", "you": "P1", "exercise": exercise})
+                    await send(ws,       {"type": "matched", "you": "P2", "exercise": exercise})
+                    print(f"[{code}] quick match ({exercise})")
                     await try_start(code)
+                else:
+                    enqueue(ws, exercise)
+                    await send(ws, {"type": "searching", "exercise": exercise})
+                    print(f"[queue] {exercise}: {len(waiting.get(exercise, []))} waiting")
+
+            # ---- cancel searching ----
+            elif t == "cancel":
+                dequeue(ws)
+                await send(ws, {"type": "cancelled"})
 
             # ---- live rep updates ----
             elif t == "reps":
-                if code and code in rooms and ws in rooms[code]["players"]:
-                    rooms[code]["players"][ws]["reps"] = int(data.get("reps", 0))
-                    await broadcast(rooms[code],
-                                    {"type": "scores", "scores": scores(rooms[code])})
+                c, room = room_of(ws)
+                if room:
+                    room["players"][ws]["reps"] = int(data.get("reps", 0))
+                    await broadcast(room, {"type": "scores", "scores": scores(room)})
 
             # ---- rematch: both must ask before it restarts ----
             elif t == "rematch":
-                if code and code in rooms and ws in rooms[code]["players"]:
-                    room = rooms[code]
+                c, room = room_of(ws)
+                if room:
                     room["players"][ws]["ready"] = True
                     both_ready = (len(room["players"]) == 2 and
                                   all(p["ready"] for p in room["players"].values()))
                     if both_ready:
-                        await try_start(code)
+                        await try_start(c)
                     else:
-                        # tell the requester they're waiting, and tell the
-                        # opponent that a rematch has been offered
                         for w in room["players"]:
                             if w is ws:
                                 await send(w, {"type": "rematch_pending"})
                             else:
                                 await send(w, {"type": "rematch_offer"})
+
+            # ---- explicit leave (reliable — doesn't wait for disconnect) ----
+            elif t == "leave":
+                await leave_room(ws)
 
     except WebSocketDisconnect:
         pass
@@ -735,28 +1005,7 @@ async def referee(ws: WebSocket):
         print("socket error:", e)
 
     finally:
-        # clean up this player's room membership
-        if code and code in rooms and ws in rooms[code]["players"]:
-            pid = rooms[code]["players"][ws]["id"]
-            del rooms[code]["players"][ws]
-            print(f"[{code}] {pid} left")
-
-            if rooms[code]["players"]:
-                # someone's still here — tell them, stop any running match
-                task = rooms[code].get("task")
-                if task:
-                    task.cancel()
-                rooms[code]["started"] = False
-                for p in rooms[code]["players"].values():
-                    p["ready"] = False
-                await broadcast(rooms[code], {"type": "opponent_left"})
-            else:
-                # empty room — delete it
-                task = rooms[code].get("task")
-                if task:
-                    task.cancel()
-                del rooms[code]
-                print(f"[{code}] closed")
+        await leave_room(ws)
 
 
 @app.get("/")
