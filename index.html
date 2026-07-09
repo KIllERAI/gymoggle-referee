@@ -112,6 +112,46 @@
   .codelabel{color:var(--dim);font-size:12px;letter-spacing:.24em;text-transform:uppercase}
   .center .btn{margin-top:20px;width:auto;padding:12px 26px;font-size:16px;background:var(--void2);border:1px solid var(--line);color:var(--bone)}
 
+  /* ===== OPPONENT PRESENCE ===== */
+  .opp-panel{position:absolute;right:14px;top:50%;transform:translateY(-50%);z-index:4;
+    width:clamp(120px,32vw,190px);background:rgba(13,11,20,.5);border:1px solid rgba(255,46,126,.45);
+    border-radius:18px;padding:12px 12px 14px;text-align:center;backdrop-filter:blur(6px);
+    opacity:0;transition:opacity .3s;pointer-events:none}
+  .opp-panel.on{opacity:1}
+  .opp-panel .opp-name{color:var(--opp);font-size:11px;letter-spacing:.16em;text-transform:uppercase}
+  .opp-panel .score{font-family:"JetBrains Mono";font-weight:800;font-size:clamp(34px,9vw,52px);
+    line-height:1;color:var(--opp);font-variant-numeric:tabular-nums;text-shadow:0 0 20px rgba(255,46,126,.4)}
+  .avatar{width:100%;height:120px;display:block;margin:2px 0}
+  .avatar .fig{transform-origin:50px 98px}
+  .avatar.ex-pushups .fig{transform-origin:50px 60px;transform:rotate(78deg)}
+  .avatar.ex-situps .fig{transform-origin:50px 74px;transform:rotate(-8deg)}
+  .avatar .fig *{stroke:var(--opp);stroke-width:5;stroke-linecap:round;fill:none}
+  .avatar .fig circle{fill:var(--opp);stroke:none}
+  .avatar.rep.ex-squats .fig{animation:repSquat .42s ease}
+  .avatar.rep.ex-pushups .fig{animation:repPush .42s ease}
+  .avatar.rep.ex-situps .fig{animation:repSit .42s ease}
+  @keyframes repSquat{0%,100%{transform:translateY(0) scaleY(1)}50%{transform:translateY(10px) scaleY(.72)}}
+  @keyframes repPush{0%,100%{transform:rotate(78deg) translateY(0)}50%{transform:rotate(78deg) translateY(10px)}}
+  @keyframes repSit{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(-46deg)}}
+
+  .race{width:100%;padding:0 20px;display:flex;flex-direction:column;gap:7px;margin-bottom:12px;
+    opacity:0;transition:opacity .3s}
+  .race.on{opacity:1}
+  .race-row{display:flex;align-items:center;gap:8px}
+  .race-row b{width:34px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+  .race-row.you b{color:var(--you)} .race-row.opp b{color:var(--opp)}
+  .track{flex:1;height:11px;background:rgba(255,255,255,.1);border-radius:6px;overflow:hidden}
+  .fill{height:100%;width:0;border-radius:6px;transition:width .25s ease}
+  .fill.you{background:var(--you)} .fill.opp{background:var(--opp)}
+
+  .callout{position:absolute;top:31%;left:50%;transform:translateX(-50%);z-index:6;width:92%;
+    font-family:"Anton";font-size:clamp(26px,7.5vw,54px);text-transform:uppercase;text-align:center;
+    line-height:1;opacity:0;pointer-events:none;text-shadow:0 3px 20px rgba(0,0,0,.6)}
+  .callout.show{animation:calloutPop 1.7s ease}
+  @keyframes calloutPop{0%{opacity:0;transform:translateX(-50%) scale(.7)}
+    14%{opacity:1;transform:translateX(-50%) scale(1.06)}22%{transform:translateX(-50%) scale(1)}
+    78%{opacity:1}100%{opacity:0;transform:translateX(-50%) scale(1)}}
+
   /* ===== RESULTS ===== */
   #results{padding:0}
   .rsplit{position:absolute;inset:0;display:flex}
@@ -188,9 +228,30 @@
         <div id="exBanner" class="exbanner"></div>
         <div class="corners">
           <div class="corner l"><span class="who" id="youName">You</span><span class="score" id="youScore">0</span></div>
-          <div class="corner r"><span class="who">Opponent</span><span class="score" id="oppScore">0</span></div>
         </div>
+
+        <div class="opp-panel" id="oppPanel">
+          <div class="opp-name">Opponent</div>
+          <svg class="avatar" id="oppAvatar" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+            <g class="fig">
+              <circle cx="50" cy="20" r="10"/>
+              <line x1="50" y1="30" x2="50" y2="68"/>
+              <line x1="50" y1="42" x2="33" y2="56"/>
+              <line x1="50" y1="42" x2="67" y2="56"/>
+              <line x1="50" y1="68" x2="37" y2="98"/>
+              <line x1="50" y1="68" x2="63" y2="98"/>
+            </g>
+          </svg>
+          <div class="score" id="oppScore">0</div>
+        </div>
+
+        <div class="callout" id="callout"></div>
+
         <div class="clockwrap">
+          <div class="race" id="raceWrap">
+            <div class="race-row you"><b>You</b><div class="track"><div class="fill you" id="youBar"></div></div></div>
+            <div class="race-row opp"><b>Opp</b><div class="track"><div class="fill opp" id="oppBar"></div></div></div>
+          </div>
           <div class="clock mono" id="clock">1:00</div>
           <div class="status" id="status">Connecting…</div>
         </div>
@@ -236,6 +297,16 @@ const clockEl=$("clock"), statusEl=$("status"), centerEl=$("center");
 const S = { me:null, myReps:0, oppReps:0, active:false, duration:60, startTs:0,
             phase:"idle", winner:null, name:"You", intent:null, code:null, exercise:"squats" };
 let chosenExercise = "squats";   // creator's pick on the landing screen
+let busy = false;                // true while a game is starting/active (blocks re-entry)
+
+// lightweight persistent identity for stats/leaderboard (no signup)
+const PID = (function(){
+  try{
+    let id = localStorage.getItem("gymoggle_pid");
+    if(!id){ id = "p_"+Math.random().toString(36).slice(2,10)+Date.now().toString(36); localStorage.setItem("gymoggle_pid", id); }
+    return id;
+  }catch(e){ return "p_"+Math.random().toString(36).slice(2,10); }
+})();
 const other = p => p==="P1" ? "P2" : "P1";
 
 /* ============================================================
@@ -414,7 +485,7 @@ function processPose(lms){
     stage="up"; flash=8;
     if(S.active){
       S.myReps++; youScoreEl.textContent=S.myReps; pushReps();
-      repPop();
+      repPop(); oppRun=0; updatePresence();
       youScoreEl.style.transform="scale(1.25)";
       setTimeout(()=>youScoreEl.style.transform="scale(1)",90);
     }
@@ -480,13 +551,15 @@ function drawPose(lms,conns,color){
 /* ---------- networking ---------- */
 let ws=null;
 function connect(){
+  // kill any previous/orphan socket so a late-opening one can't send stray messages
+  try{ if(ws){ ws.onopen=ws.onmessage=ws.onerror=ws.onclose=null; ws.close(); } }catch(e){}
   try{ ws=new WebSocket(SERVER_URL); }
   catch(e){ setStatus("Bad server address",true); return; }
 
   ws.onopen = ()=>{
-    if(S.intent==="create") ws.send(JSON.stringify({type:"create", exercise:chosenExercise}));
-    else if(S.intent==="join") ws.send(JSON.stringify({type:"join", code:S.code}));
-    else if(S.intent==="quick") ws.send(JSON.stringify({type:"quick", exercise:chosenExercise}));
+    if(S.intent==="create") ws.send(JSON.stringify({type:"create", exercise:chosenExercise, pid:PID, name:S.name}));
+    else if(S.intent==="join") ws.send(JSON.stringify({type:"join", code:S.code, pid:PID, name:S.name}));
+    else if(S.intent==="quick") ws.send(JSON.stringify({type:"quick", exercise:chosenExercise, pid:PID, name:S.name}));
   };
   ws.onmessage = ev=>{
     const d=JSON.parse(ev.data), t=d.type;
@@ -499,7 +572,11 @@ function connect(){
     else if(t==="cancelled"){ /* handled locally on cancel tap */ }
     else if(t==="opponent_here"){ /* start follows */ }
     else if(t==="start"){ if(d.exercise) S.exercise=d.exercise; show("game"); startMatch(d.duration); }
-    else if(t==="scores"){ const sc=d.scores; if(S.me && other(S.me) in sc){ S.oppReps=sc[other(S.me)]; oppScoreEl.textContent=S.oppReps; } }
+    else if(t==="scores"){ const sc=d.scores; if(S.me && other(S.me) in sc){
+        const newOpp=sc[other(S.me)];
+        if(newOpp>S.oppReps){ oppRepPump(); oppRun += (newOpp - S.oppReps); }
+        S.oppReps=newOpp; oppScoreEl.textContent=S.oppReps; updatePresence();
+      } }
     else if(t==="end"){ const sc=d.scores; if(S.me && other(S.me) in sc) S.oppReps=sc[other(S.me)]; endMatch(d.winner); }
     else if(t==="rematch_pending"){ setAgain("pending"); }
     else if(t==="rematch_offer"){ setAgain("offer"); }
@@ -524,6 +601,60 @@ function pushReps(){
 /* ---------- center-screen states ---------- */
 function setStatus(txt,warn=false){ statusEl.textContent=txt; statusEl.classList.toggle("warn",warn); }
 function exLabel(){ return (EXERCISES[S.exercise]||EXERCISES.squats).label; }
+
+/* ---------- opponent presence + callouts ---------- */
+const CALLOUTS = {
+  ahead:  ["You pulled ahead!","You're MOGGING them!","Certified mogger 😤","They can't keep up!",
+           "Eat their dust!","You're built different!","Keep cooking 🔥","Lead is yours — take it!",
+           "They're gassed, push!","Dominate!"],
+  behind: ["They passed you!","Don't get mogged!","You're getting cooked!","Wake up — they're ahead!",
+           "They're pulling away!","Catch up, champ!","Dig deeper!","You're better than this!",
+           "Turn it UP 🔥","No mercy — move!"],
+  tie:    ["Neck and neck!","Too close to call!","It's a DOGFIGHT!","Dead heat!","Someone break it!","All square!"],
+  streak: ["They're on a HEATER 🔥","They're cooking!","Unstoppable streak!","Beast mode engaged!","Stop the bleeding!"]
+};
+const pick = arr => arr[Math.floor(Math.random()*arr.length)];
+let prevLead=0, lastCalloutAt=0, oppRun=0;
+
+function oppRepPump(){
+  const a=$("oppAvatar"); if(!a) return;
+  a.classList.remove("rep"); void a.offsetWidth; a.classList.add("rep");
+}
+function flashCallout(text,tone){
+  const c=$("callout"); if(!c) return;
+  c.textContent=text;
+  c.style.color = tone==="ahead"?"var(--you)":(tone==="behind"?"var(--opp)":"var(--gold)");
+  c.classList.remove("show"); void c.offsetWidth; c.classList.add("show");
+}
+function updatePresence(){
+  const you=S.myReps, opp=S.oppReps, max=Math.max(you,opp,1);
+  const yb=$("youBar"), ob=$("oppBar");
+  if(yb) yb.style.width=(you/max*100)+"%";
+  if(ob) ob.style.width=(opp/max*100)+"%";
+  if(!S.active) return;
+  const now=performance.now(), diff=you-opp;
+  const lead = diff>0?1:(diff<0?-1:0);
+  const leadChanged = lead!==prevLead;
+  let pool = diff>0?"ahead":(diff<0?"behind":"tie");
+  if(oppRun>=3 && diff<0) pool="streak";
+  const tone = diff>0?"ahead":(diff<0?"behind":"tie");
+  if(leadChanged || oppRun>=3 || now-lastCalloutAt>2600){
+    flashCallout(pick(CALLOUTS[pool]), tone);
+    lastCalloutAt=now;
+    if(pool==="streak") oppRun=0;
+  }
+  prevLead=lead;
+}
+function resetPresence(){
+  prevLead=0; lastCalloutAt=0; oppRun=0;
+  const yb=$("youBar"), ob=$("oppBar"); if(yb) yb.style.width="0%"; if(ob) ob.style.width="0%";
+  $("callout").classList.remove("show");
+  $("oppAvatar").setAttribute("class","avatar ex-"+S.exercise);   // SVG className is read-only; use setAttribute
+}
+function showPresence(on){
+  $("oppPanel").classList.toggle("on",on);
+  $("raceWrap").classList.toggle("on",on);
+}
 function centerWait(title, sub){
   centerEl.innerHTML=`<div class="box"><div class="spin"></div><p>${title}</p><small>${sub||""}</small></div>`;
 }
@@ -570,7 +701,7 @@ function startMatch(duration){
   S.duration=duration||60; S.startTs=performance.now()/1000;
   S.myReps=0; S.oppReps=0; lastSent=-1; lastSecond=-1;
   youScoreEl.textContent="0"; oppScoreEl.textContent="0";
-  S.phase="playing"; setStatus("Get ready"); setAgain("idle"); removeLeftNote();
+  S.phase="playing"; setStatus("Get ready"); setAgain("idle"); removeLeftNote(); resetPresence();
   centerEl.innerHTML='<div class="box"><div class="vsflash">VS</div></div>';
   tick();
   setTimeout(runCountdown, 700);
@@ -580,7 +711,7 @@ function runCountdown(){
   let i=0;
   (function step(){
     if(i>=seq.length){ centerEl.innerHTML=""; S.active=true; setStatus(exLabel()+" — go!"); startBeat();
-      const eb=$("exBanner"); eb.textContent="Perform "+exLabel()+"!"; eb.classList.add("on"); return; }
+      const eb=$("exBanner"); eb.textContent="Perform "+exLabel()+"!"; eb.classList.add("on"); showPresence(true); return; }
     const [n,f]=seq[i++];
     centerEl.innerHTML=`<div class="box"><div class="bigcount">${n}</div></div>`;
     beep(f, n==="GO"?0.34:0.14, n==="GO"?"sawtooth":"square", 0.28);
@@ -602,7 +733,7 @@ function tick(){
   requestAnimationFrame(tick);
 }
 function endMatch(winner){
-  S.active=false; S.phase="done"; S.winner=winner; stopBeat(); $("exBanner").classList.remove("on");
+  S.active=false; S.phase="done"; S.winner=winner; stopBeat(); $("exBanner").classList.remove("on"); showPresence(false);
   $("rYouName").textContent=S.name;
   const iWon=winner===S.me, tie=winner==="TIE";
   const v=$("verdict");
@@ -673,7 +804,7 @@ function setAgain(mode){
 }
 function removeLeftNote(){ const n=$("leftNote"); if(n) n.remove(); }
 function opponentLeft(){
-  stopBeat(); $("exBanner").classList.remove("on"); S.active=false;
+  stopBeat(); $("exBanner").classList.remove("on"); showPresence(false); S.active=false;
   toast("Your rival left the game.");
   if(screens.results.classList.contains("on")){
     // stay on the results screen, but make it obvious the rematch is off
@@ -694,7 +825,7 @@ function opponentLeft(){
   }
 }
 function backToLanding(){
-  removeLeftNote();
+  removeLeftNote(); busy=false;
   S.phase="idle"; S.me=null; S.code=null; S.intent=null;
   try{ if(ws && ws.readyState===1) ws.send(JSON.stringify({type:"leave"})); }catch(e){}
   try{ if(ws) ws.close(); }catch(e){}
@@ -710,6 +841,8 @@ function resetLandingButtons(){
   $("joinBtn").disabled=false; $("joinBtn").textContent="Join";
 }
 async function enterGame(intent, code){
+  if(busy) return;            // ignore double-taps / retries while a game is starting
+  busy=true;
   initAudio();   // unlock audio on the user gesture
   S.name=($("name").value.trim()||"You").slice(0,12);
   $("youName").textContent=S.name;
@@ -720,7 +853,7 @@ async function enterGame(intent, code){
     if(!landmarker) await initModel();
     await initCamera();
   }catch(e){
-    resetLandingButtons();
+    resetLandingButtons(); busy=false;
     toast(e.name==="NotAllowedError" ? "Camera blocked — allow access and try again." : "Couldn't start camera/model. "+e.message);
     return;
   }
