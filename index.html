@@ -189,12 +189,57 @@
   .sharebtns{display:flex;gap:10px;justify-content:center;margin-top:20px;flex-wrap:wrap}
   .sharebtns .btn{margin-top:0}
   #shareBtn{background:linear-gradient(100deg,var(--you),var(--opp));color:var(--void);border:none}
+
+  /* ===== LANDING SPARKLE (decorative, non-interactive) ===== */
+  #landing .mark{background-size:220% auto;animation:shimmer 7s linear infinite}
+  @keyframes shimmer{to{background-position:220% center}}
+  .sparkles{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+  .sparkles i{position:absolute;bottom:-10px;width:6px;height:6px;border-radius:50%;
+    background:var(--you);opacity:0;filter:blur(.3px);
+    animation:rise linear infinite}
+  .sparkles i:nth-child(even){background:var(--opp)}
+  .sparkles i:nth-child(3n){background:var(--gold)}
+  @keyframes rise{
+    0%{transform:translateY(0) scale(.6);opacity:0}
+    10%{opacity:.8}
+    90%{opacity:.5}
+    100%{transform:translateY(-105vh) scale(1);opacity:0}}
+  #landing > *:not(.sparkles){position:relative;z-index:1}
+
+  /* ===== LEADERBOARD ===== */
+  #board{justify-content:flex-start;padding:26px 18px;gap:16px}
+  .board-head{display:flex;align-items:center;gap:14px;width:min(560px,94vw);margin-top:6px}
+  .board-head h2{font-family:"Anton";font-size:clamp(26px,7vw,40px);text-transform:uppercase;letter-spacing:.02em;
+    background:linear-gradient(100deg,var(--you),var(--opp));-webkit-background-clip:text;background-clip:text;color:transparent}
+  #boardBack{width:42px;height:42px;flex:none;border-radius:12px;border:1px solid var(--line);
+    background:var(--void2);color:var(--bone);font-size:20px;cursor:pointer}
+  .board-tabs{display:flex;gap:8px;width:min(560px,94vw)}
+  .btab{flex:1;padding:12px;border:1px solid var(--line);background:var(--void2);color:var(--dim);
+    border-radius:12px;cursor:pointer;font-family:"Anton";font-size:15px;letter-spacing:.04em;text-transform:uppercase}
+  .btab.on{border-color:var(--you);color:var(--bone);background:rgba(34,224,214,.12)}
+  .ex-filter{display:flex;gap:8px;width:min(560px,94vw)}
+  .bex{flex:1;padding:9px 4px;border:1px solid var(--line);background:var(--void2);color:var(--dim);
+    border-radius:10px;cursor:pointer;font-size:12px;letter-spacing:.05em;text-transform:uppercase}
+  .bex.on{border-color:var(--gold);color:var(--bone);background:rgba(255,210,63,.1)}
+  .ex-filter.hide{display:none}
+  .board-list{width:min(560px,94vw);display:flex;flex-direction:column;gap:8px;overflow-y:auto;flex:1;padding-bottom:10px}
+  .lb-row{display:flex;align-items:center;gap:14px;padding:13px 16px;border-radius:12px;
+    background:var(--void2);border:1px solid var(--line)}
+  .lb-rank{width:30px;font-family:"JetBrains Mono";font-weight:800;font-size:18px;color:var(--dim);text-align:center;font-variant-numeric:tabular-nums}
+  .lb-name{flex:1;font-size:16px;letter-spacing:.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lb-val{font-family:"JetBrains Mono";font-weight:800;font-size:20px;color:var(--you);font-variant-numeric:tabular-nums}
+  .lb-row.rank1{border-color:var(--gold);background:rgba(255,210,63,.12);box-shadow:0 0 24px rgba(255,210,63,.15)}
+  .lb-row.rank1 .lb-rank,.lb-row.rank1 .lb-val{color:var(--gold)}
+  .lb-row.rank2{border-color:rgba(244,240,255,.4)} .lb-row.rank2 .lb-rank{color:var(--bone)}
+  .lb-row.rank3{border-color:rgba(255,46,126,.4)} .lb-row.rank3 .lb-rank{color:var(--opp)}
+  .lb-empty{text-align:center;color:var(--dim);padding:40px 0;font-size:14px}
 </style>
 </head>
 <body>
 
   <!-- ===== LANDING ===== -->
   <section id="landing" class="screen on">
+    <div class="sparkles" id="sparkles" aria-hidden="true"></div>
     <h1 class="mark">GymOggle</h1>
     <p class="tag">Battle a friend · most reps wins</p>
     <p id="challengeNote" class="challenge" style="display:none">⚔️ You've been challenged! Enter a tag and tap Join.</p>
@@ -213,9 +258,28 @@
         <input id="joinCode" maxlength="4" placeholder="CODE" autocomplete="off" />
         <button id="joinBtn" class="btn ghost">Join</button>
       </div>
+      <button id="boardBtn" class="btn ghost wide">🏆 Leaderboard</button>
     </div>
     <p class="fineprint">Find a random opponent, or create a game and share the code with a friend.
       Camera stays on your device — only your rep count is sent.</p>
+  </section>
+
+  <!-- ===== LEADERBOARD ===== -->
+  <section id="board" class="screen">
+    <div class="board-head">
+      <button id="boardBack">←</button>
+      <h2>Leaderboard</h2>
+    </div>
+    <div class="board-tabs">
+      <button class="btab on" data-tab="scores">Top Scores</button>
+      <button class="btab" data-tab="wins">Most Wins</button>
+    </div>
+    <div class="ex-filter" id="exFilter">
+      <button class="bex on" data-bex="squats">Squats</button>
+      <button class="bex" data-bex="pushups">Push-ups</button>
+      <button class="bex" data-bex="situps">Sit-ups</button>
+    </div>
+    <div class="board-list" id="boardList"></div>
   </section>
 
   <!-- ===== GAME ===== -->
@@ -287,7 +351,7 @@ const SERVER_URL = params.get("server") || DEFAULT_SERVER;
 const JOIN_CODE = (params.get("join") || "").toUpperCase().slice(0,4);
 
 const $ = id => document.getElementById(id);
-const screens = { landing:$("landing"), game:$("game"), results:$("results") };
+const screens = { landing:$("landing"), game:$("game"), results:$("results"), board:$("board") };
 function show(name){ for(const k in screens) screens[k].classList.toggle("on", k===name); }
 
 const video=$("video"), overlay=$("overlay"), octx=overlay.getContext("2d");
@@ -890,6 +954,61 @@ $("againBtn").addEventListener("click", ()=>{
 $("exitBtn").addEventListener("click", ()=> backToLanding());
 
 function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("on"); setTimeout(()=>t.classList.remove("on"),4000); }
+
+/* ---------- leaderboard ---------- */
+const HTTP_BASE = SERVER_URL.replace(/^ws/, "http");   // wss->https, ws->http
+let boardData = null, boardTab = "scores", boardEx = "squats";
+
+async function openBoard(){
+  show("board");
+  $("boardList").innerHTML = `<div class="lb-empty">Loading…</div>`;
+  try{
+    const res = await fetch(HTTP_BASE + "/leaderboard");
+    boardData = await res.json();
+    if(!boardData.ok) throw new Error(boardData.error||"failed");
+    renderBoard();
+  }catch(e){
+    $("boardList").innerHTML = `<div class="lb-empty">Couldn't load the leaderboard.<br>(The server may be waking up — try again in a moment.)</div>`;
+  }
+}
+function renderBoard(){
+  $("exFilter").classList.toggle("hide", boardTab!=="scores");
+  const rows = boardTab==="scores"
+    ? (boardData.scores?.[boardEx] || [])
+    : (boardData.wins || []);
+  if(!rows.length){ $("boardList").innerHTML = `<div class="lb-empty">No scores yet — be the first!</div>`; return; }
+  $("boardList").innerHTML = rows.map((r,i)=>{
+    const rank=i+1, cls = rank<=3 ? " rank"+rank : "";
+    const name = (r.name||"Player").replace(/[<>&]/g,"");
+    return `<div class="lb-row${cls}"><span class="lb-rank">${rank}</span>`+
+           `<span class="lb-name">${name}</span><span class="lb-val">${r.value}</span></div>`;
+  }).join("");
+}
+$("boardBtn").addEventListener("click", openBoard);
+$("boardBack").addEventListener("click", ()=> show("landing"));
+document.querySelectorAll(".btab").forEach(b=> b.addEventListener("click",()=>{
+  document.querySelectorAll(".btab").forEach(x=>x.classList.remove("on")); b.classList.add("on");
+  boardTab=b.dataset.tab; renderBoard();
+}));
+document.querySelectorAll(".bex").forEach(b=> b.addEventListener("click",()=>{
+  document.querySelectorAll(".bex").forEach(x=>x.classList.remove("on")); b.classList.add("on");
+  boardEx=b.dataset.bex; renderBoard();
+}));
+
+/* ---------- decorative sparkles on the landing (guarded, non-critical) ---------- */
+try{
+  const box=$("sparkles");
+  if(box){
+    for(let i=0;i<16;i++){
+      const s=document.createElement("i");
+      s.style.left=Math.random()*100+"%";
+      s.style.animationDuration=(6+Math.random()*6)+"s";
+      s.style.animationDelay=(-Math.random()*8)+"s";
+      const sc=0.5+Math.random()*1.1; s.style.width=s.style.height=(4*sc)+"px";
+      box.appendChild(s);
+    }
+  }
+}catch(e){}
 
 // best-effort: tell the server we're gone if the tab closes mid-game
 window.addEventListener("pagehide", ()=>{ try{ if(ws && ws.readyState===1) ws.send(JSON.stringify({type:"leave"})); }catch(e){} });

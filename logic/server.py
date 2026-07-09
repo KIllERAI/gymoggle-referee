@@ -1329,6 +1329,13 @@ CODE_LEN = 4
 
 app = FastAPI()
 
+# allow the browser (Netlify origin) to fetch the leaderboard over HTTP
+from fastapi.middleware.cors import CORSMiddleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], allow_methods=["*"], allow_headers=["*"],
+)
+
 # rooms: code -> {
 #   "players": { websocket: {"id": "P1"/"P2", "reps": int, "ready": bool} },
 #   "started": bool,
@@ -1635,6 +1642,26 @@ async def dbtest():
         supabase.table("pings").insert({"note": "hello from render"}).execute()
         rows = supabase.table("pings").select("*").order("created_at", desc=True).limit(3).execute()
         return {"ok": True, "recent_pings": rows.data}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+# sync def -> FastAPI runs it in a threadpool, so DB reads don't block the game loop
+@app.get("/leaderboard")
+def leaderboard():
+    if not supabase:
+        return {"ok": False, "error": "no db"}
+    out = {"ok": True, "scores": {}, "wins": []}
+    try:
+        for ex in ("squats", "pushups", "situps"):
+            col = "best_" + ex
+            r = (supabase.table("players").select("name," + col)
+                 .gt(col, 0).order(col, desc=True).limit(10).execute())
+            out["scores"][ex] = [{"name": row["name"], "value": row[col]} for row in r.data]
+        w = (supabase.table("players").select("name,wins")
+             .gt("wins", 0).order("wins", desc=True).limit(10).execute())
+        out["wins"] = [{"name": row["name"], "value": row["wins"]} for row in w.data]
+        return out
     except Exception as e:
         return {"ok": False, "error": str(e)}
 
