@@ -233,9 +233,94 @@
   .lb-row.rank2{border-color:rgba(244,240,255,.4)} .lb-row.rank2 .lb-rank{color:var(--bone)}
   .lb-row.rank3{border-color:rgba(255,46,126,.4)} .lb-row.rank3 .lb-rank{color:var(--opp)}
   .lb-empty{text-align:center;color:var(--dim);padding:40px 0;font-size:14px}
+
+  /* ===== INTRO SPLASH (dumbbell clash -> logo) ===== */
+  #splash{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;
+    overflow:hidden;transition:opacity .45s ease;
+    background:
+      radial-gradient(120% 80% at 0% 0%, rgba(34,224,214,.12), transparent 45%),
+      radial-gradient(120% 80% at 100% 100%, rgba(255,46,126,.14), transparent 45%),
+      var(--void)}
+  #splash .db{position:absolute;top:50%;left:50%;width:clamp(150px,32vw,240px)}
+  #splash .db svg{width:100%;height:auto;display:block}
+  #splash .db svg rect{fill:currentColor}
+  #splash .db-l{color:var(--you);animation:dbL 2.8s cubic-bezier(.7,0,.3,1) forwards}
+  #splash .db-r{color:var(--opp);animation:dbR 2.8s cubic-bezier(.7,0,.3,1) forwards}
+  @keyframes dbL{
+    0%{transform:translate(-100%,-50%) translateX(-75vw) rotate(-7deg);opacity:0}
+    15%{opacity:1}
+    30%,40%{transform:translate(-100%,-50%) translateX(12px) rotate(0);opacity:1}
+    65%{transform:translate(-100%,-50%) translateX(-80vw) rotate(-10deg);opacity:1}
+    100%{transform:translate(-100%,-50%) translateX(-80vw);opacity:0}}
+  @keyframes dbR{
+    0%{transform:translate(0,-50%) translateX(75vw) rotate(7deg);opacity:0}
+    15%{opacity:1}
+    30%,40%{transform:translate(0,-50%) translateX(-12px) rotate(0);opacity:1}
+    65%{transform:translate(0,-50%) translateX(80vw) rotate(10deg);opacity:1}
+    100%{transform:translate(0,-50%) translateX(80vw);opacity:0}}
+  #splash .flash{position:absolute;width:min(60vw,420px);height:min(60vw,420px);border-radius:50%;
+    background:radial-gradient(circle,#fff,rgba(255,255,255,.3) 30%,transparent 70%);
+    opacity:0;animation:splFlash 2.8s ease forwards;pointer-events:none}
+  @keyframes splFlash{0%,28%{opacity:0;transform:scale(.2)}34%{opacity:.95;transform:scale(1)}
+    44%{opacity:0;transform:scale(1.5)}100%{opacity:0}}
+  #splash .ring{position:absolute;width:40px;height:40px;border-radius:50%;border:3px solid var(--bone);
+    opacity:0;animation:splRing 2.8s ease forwards;pointer-events:none}
+  @keyframes splRing{0%,30%{opacity:0;transform:scale(.4)}36%{opacity:.8}
+    52%{opacity:0;transform:scale(9)}100%{opacity:0}}
+  #splash .logo{font-family:"Anton",system-ui,sans-serif;font-size:clamp(52px,15vw,150px);line-height:.9;
+    text-transform:uppercase;text-align:center;
+    background:linear-gradient(100deg,var(--you) 0%,var(--bone) 50%,var(--opp) 100%);
+    background-size:220% auto;-webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 0 30px rgba(255,255,255,.25));opacity:0;
+    animation:splLogo 2.8s cubic-bezier(.5,1.6,.4,1) forwards, shimmer 3s linear 1.5s infinite}
+  @keyframes splLogo{0%,38%{opacity:0;transform:scale(.55)}
+    52%{opacity:1;transform:scale(1.06)}60%{transform:scale(1)}100%{opacity:1;transform:scale(1)}}
+
+  /* ===== PRE-GAME LOBBY ===== */
+  .lobby{width:min(440px,92vw);background:rgba(13,11,20,.82);border:1px solid var(--line);
+    border-radius:18px;padding:18px;backdrop-filter:blur(10px);text-align:center;pointer-events:auto}
+  .lobby .l-title{font-family:"Anton";font-size:clamp(24px,7vw,36px);text-transform:uppercase;
+    background:linear-gradient(100deg,var(--you),var(--opp));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lobby .l-vs{color:var(--bone);font-size:14px;letter-spacing:.06em;margin-top:2px}
+  .lobby .l-vs b{color:var(--opp)}
+  .lobby .l-timer{font-family:"JetBrains Mono";font-weight:800;font-size:clamp(30px,9vw,46px);
+    color:var(--gold);font-variant-numeric:tabular-nums;margin:6px 0}
+  .lobby .l-chat{height:130px;overflow-y:auto;text-align:left;background:rgba(0,0,0,.3);
+    border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:10px 0;display:flex;flex-direction:column;gap:5px}
+  .lobby .l-chat .msg{font-size:13px;line-height:1.35;word-break:break-word}
+  .lobby .l-chat .msg b{color:var(--you)} .lobby .l-chat .msg.them b{color:var(--opp)}
+  .lobby .l-chat .sys{color:var(--dim);font-size:12px;font-style:italic}
+  .lobby .l-inrow{display:flex;gap:8px}
+  .lobby .l-inrow input{flex:1;background:var(--void2);border:1px solid var(--line);color:var(--bone);
+    border-radius:10px;padding:11px;font-size:14px;font-family:inherit}
+  .lobby .l-inrow input:focus{outline:none;border-color:var(--you)}
+  .lobby .l-inrow button{padding:11px 16px;border:none;border-radius:10px;
+    background:var(--void2);border:1px solid var(--line);color:var(--bone);cursor:pointer;font-family:"Anton";font-size:14px}
+  .lobby .l-ready{width:100%;margin-top:12px;padding:14px;border:none;border-radius:12px;cursor:pointer;
+    font-family:"Anton";font-size:20px;letter-spacing:.05em;text-transform:uppercase;
+    color:var(--void);background:linear-gradient(100deg,var(--you),var(--opp))}
+  .lobby .l-ready:disabled{opacity:.6;cursor:default;filter:grayscale(.3)}
+  .lobby .l-status{margin-top:8px;font-size:12px;color:var(--dim);min-height:16px}
 </style>
 </head>
 <body>
+
+  <!-- ===== INTRO SPLASH ===== -->
+  <div id="splash">
+    <div class="ring"></div>
+    <div class="flash"></div>
+    <div class="db db-l"><svg viewBox="0 0 150 60" xmlns="http://www.w3.org/2000/svg">
+      <rect x="55" y="25" width="40" height="10" rx="5"/>
+      <rect x="34" y="14" width="14" height="32" rx="4"/><rect x="20" y="7" width="12" height="46" rx="4"/>
+      <rect x="102" y="14" width="14" height="32" rx="4"/><rect x="118" y="7" width="12" height="46" rx="4"/>
+    </svg></div>
+    <div class="db db-r"><svg viewBox="0 0 150 60" xmlns="http://www.w3.org/2000/svg">
+      <rect x="55" y="25" width="40" height="10" rx="5"/>
+      <rect x="34" y="14" width="14" height="32" rx="4"/><rect x="20" y="7" width="12" height="46" rx="4"/>
+      <rect x="102" y="14" width="14" height="32" rx="4"/><rect x="118" y="7" width="12" height="46" rx="4"/>
+    </svg></div>
+    <div class="logo">GymOggle</div>
+  </div>
 
   <!-- ===== LANDING ===== -->
   <section id="landing" class="screen on">
@@ -359,7 +444,7 @@ const youScoreEl=$("youScore"), oppScoreEl=$("oppScore");
 const clockEl=$("clock"), statusEl=$("status"), centerEl=$("center");
 
 const S = { me:null, myReps:0, oppReps:0, active:false, duration:60, startTs:0,
-            phase:"idle", winner:null, name:"You", intent:null, code:null, exercise:"squats" };
+            phase:"idle", winner:null, name:"You", intent:null, code:null, exercise:"squats", oppName:"Opponent" };
 let chosenExercise = "squats";   // creator's pick on the landing screen
 let busy = false;                // true while a game is starting/active (blocks re-entry)
 
@@ -385,6 +470,22 @@ function initAudio(){
     master.connect(actx.destination);
   }
   if(actx.state==="suspended") actx.resume();
+  // prime text-to-speech on this user gesture (needed on mobile)
+  try{ if(window.speechSynthesis) speechSynthesis.resume(); }catch(e){}
+}
+
+/* ---- text-to-speech: read cues aloud (phones can't read the on-screen text) ---- */
+const sayable = t => (t||"").replace(/[^\x00-\x7F]/g,"").replace(/\s+/g," ").trim();
+function speak(text, interrupt){
+  try{
+    if(muted || !window.speechSynthesis) return;
+    const words = sayable(text);
+    if(!words) return;
+    if(interrupt) speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(words);
+    u.lang="en-US"; u.rate=1.06; u.pitch=1.0; u.volume=1.0;
+    speechSynthesis.speak(u);
+  }catch(e){}
 }
 function beep(freq=440, dur=0.14, type="square", vol=0.25, when=0){
   if(!actx||!master) return;
@@ -471,6 +572,7 @@ function stopBeat(){
 $("muteBtn").addEventListener("click",()=>{
   muted=!muted;
   if(master) master.gain.value=muted?0:1;
+  if(muted){ try{ if(window.speechSynthesis) speechSynthesis.cancel(); }catch(e){} }
   $("muteBtn").textContent=muted?"🔇":"🔊";
 });
 
@@ -517,6 +619,9 @@ const EXERCISES = {
       if(bv<0.5) return {ok:false};
       const [sh,hip,kn,el,wr]=best;
       const S_=lms[sh], H=lms[hip], W=lms[wr];
+      // ORIENTATION GATE: body must be roughly HORIZONTAL (a plank).
+      // Standing is vertical -> blocked, so standing + arm-bending can't score.
+      if(Math.abs(H.x - S_.x) < Math.abs(H.y - S_.y)) return {ok:false, warnMsg:"Get horizontal — this is a plank position"};
       const torso=Math.hypot(S_.x-H.x, S_.y-H.y)||0.001;
       const elevation=(W.y - S_.y)/torso;   // shoulder height above hands (in torso-lengths)
       // up = pressed high off the floor; down = chest lowered near the floor
@@ -534,8 +639,13 @@ const EXERCISES = {
       for(const a of sides){ const v=Math.min(vis(lms[a[0]]),vis(lms[a[1]]),vis(lms[a[2]])); if(v>bv){bv=v;best=a;} }
       if(bv<0.5) return {ok:false};
       const [s,h,k]=best;
+      const S_=lms[s], H=lms[h];
       const ang=angle(lms[s],lms[h],lms[k]);
-      return {ok:true, down:ang>140, up:ang<75, draw:[[s,h],[h,k]]};
+      // The "down" (lying flat) state only counts if the body is actually HORIZONTAL.
+      // Standing straight has the same shoulder-hip-knee angle as lying, so without
+      // this gate you could stand and bend to fake sit-ups. Vertical body -> no "down".
+      const lyingFlat = Math.abs(H.x - S_.x) > Math.abs(H.y - S_.y);
+      return {ok:true, down:(ang>140 && lyingFlat), up:ang<75, draw:[[s,h],[h,k]]};
     }
   }
 };
@@ -549,7 +659,7 @@ function processPose(lms){
     stage="up"; flash=8;
     if(S.active){
       S.myReps++; youScoreEl.textContent=S.myReps; pushReps();
-      repPop(); oppRun=0; updatePresence();
+      repPop(); oppRun=0; myLastRepTs=performance.now(); updatePresence();
       youScoreEl.style.transform="scale(1.25)";
       setTimeout(()=>youScoreEl.style.transform="scale(1)",90);
     }
@@ -633,6 +743,9 @@ function connect(){
     else if(t==="searching"){ if(d.exercise) S.exercise=d.exercise; showSearching(); }
     else if(t==="matched"){ S.me=d.you; if(d.exercise) S.exercise=d.exercise;
       centerWait("Opponent found!","Get ready to battle"); }
+    else if(t==="lobby"){ if(d.names) S.oppName=d.names[other(S.me)]||"Opponent"; openLobby(d.duration); }
+    else if(t==="chat"){ addChat(d.text, d.who===S.me, d.from); }
+    else if(t==="ready_state"){ if(d.who!==S.me) lobbyOppReady(); }
     else if(t==="cancelled"){ /* handled locally on cancel tap */ }
     else if(t==="opponent_here"){ /* start follows */ }
     else if(t==="start"){ if(d.exercise) S.exercise=d.exercise; show("game"); startMatch(d.duration); }
@@ -675,10 +788,14 @@ const CALLOUTS = {
            "They're pulling away!","Catch up, champ!","Dig deeper!","You're better than this!",
            "Turn it UP 🔥","No mercy — move!"],
   tie:    ["Neck and neck!","Too close to call!","It's a DOGFIGHT!","Dead heat!","Someone break it!","All square!"],
-  streak: ["They're on a HEATER 🔥","They're cooking!","Unstoppable streak!","Beast mode engaged!","Stop the bleeding!"]
+  streak: ["They're on a HEATER 🔥","They're cooking!","Unstoppable streak!","Beast mode engaged!","Stop the bleeding!"],
+  idle:   ["Hello? Are you even there?","Did you fall asleep? 😴","Anyone home? MOVE!","Your bar's collecting dust…",
+           "This isn't a rest day!","Wake up — they're repping!","Are you buffering?","Hello?? Do something!"]
 };
 const pick = arr => arr[Math.floor(Math.random()*arr.length)];
-let prevLead=0, lastCalloutAt=0, oppRun=0;
+let prevLead=0, lastCalloutAt=0, oppRun=0, myLastRepTs=0;
+const IDLE_MS=10000;   // no reps for 10s -> "you there?" nudge
+const isIdle = () => S.active && (performance.now()-myLastRepTs > IDLE_MS);
 
 function oppRepPump(){
   const a=$("oppAvatar"); if(!a) return;
@@ -687,8 +804,9 @@ function oppRepPump(){
 function flashCallout(text,tone){
   const c=$("callout"); if(!c) return;
   c.textContent=text;
-  c.style.color = tone==="ahead"?"var(--you)":(tone==="behind"?"var(--opp)":"var(--gold)");
+  c.style.color = tone==="ahead"?"var(--you)":(tone==="behind"?"var(--opp)":(tone==="idle"?"var(--bone)":"var(--gold)"));
   c.classList.remove("show"); void c.offsetWidth; c.classList.add("show");
+  speak(text, true);   // read the trash-talk aloud
 }
 function updatePresence(){
   const you=S.myReps, opp=S.oppReps, max=Math.max(you,opp,1);
@@ -698,6 +816,8 @@ function updatePresence(){
   if(!S.active) return;
   const now=performance.now(), diff=you-opp;
   const lead = diff>0?1:(diff<0?-1:0);
+  // if I've gone idle, the idle nudge (fired from tick) owns my screen — no lead/trail clash
+  if(isIdle()){ prevLead=lead; return; }
   const leadChanged = lead!==prevLead;
   let pool = diff>0?"ahead":(diff<0?"behind":"tie");
   if(oppRun>=3 && diff<0) pool="streak";
@@ -710,7 +830,7 @@ function updatePresence(){
   prevLead=lead;
 }
 function resetPresence(){
-  prevLead=0; lastCalloutAt=0; oppRun=0;
+  prevLead=0; lastCalloutAt=0; oppRun=0; myLastRepTs=performance.now();
   const yb=$("youBar"), ob=$("oppBar"); if(yb) yb.style.width="0%"; if(ob) ob.style.width="0%";
   $("callout").classList.remove("show");
   $("oppAvatar").setAttribute("class","avatar ex-"+S.exercise);   // SVG className is read-only; use setAttribute
@@ -732,6 +852,62 @@ function showSearching(){
     try{ if(ws && ws.readyState===1) ws.send(JSON.stringify({type:"cancel"})); }catch(e){}
     backToLanding();
   });
+}
+
+/* ---------- pre-game lobby (ready-up + countdown + chat) ---------- */
+let lobbyTimer=null, lobbyReady=false;
+const esc = s => (s||"").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function openLobby(duration){
+  S.phase="lobby"; lobbyReady=false;
+  setStatus("Get ready");
+  centerEl.innerHTML=`<div class="lobby">
+    <div class="l-title">Get Ready</div>
+    <div class="l-vs">You vs <b>${esc(S.oppName||"Opponent")}</b> · ${exLabel()}</div>
+    <div class="l-timer" id="lTimer">0:${String(duration).padStart(2,"0")}</div>
+    <div class="l-chat" id="lChat"><div class="sys">Say hi — or talk some trash 😤</div></div>
+    <div class="l-inrow">
+      <input id="chatInput" maxlength="200" placeholder="Talk trash…" autocomplete="off" />
+      <button id="chatSend">Send</button>
+    </div>
+    <button class="l-ready" id="readyBtn">Ready</button>
+    <div class="l-status" id="lStatus"></div>
+  </div>`;
+  // local countdown (server is authoritative on the actual start)
+  let remaining=duration;
+  clearInterval(lobbyTimer);
+  lobbyTimer=setInterval(()=>{
+    remaining--; const el=$("lTimer");
+    if(el) el.textContent="0:"+String(Math.max(0,remaining)).padStart(2,"0");
+    if(remaining<=0) clearInterval(lobbyTimer);
+  },1000);
+  // wire chat + ready
+  const send=()=>{
+    const inp=$("chatInput"); if(!inp) return;
+    const txt=inp.value.trim(); if(!txt) return;
+    try{ if(ws&&ws.readyState===1) ws.send(JSON.stringify({type:"chat", text:txt})); }catch(e){}
+    inp.value="";
+  };
+  $("chatSend").addEventListener("click", send);
+  $("chatInput").addEventListener("keydown", e=>{ if(e.key==="Enter") send(); });
+  $("readyBtn").addEventListener("click", ()=>{
+    if(lobbyReady) return;
+    lobbyReady=true;
+    try{ if(ws&&ws.readyState===1) ws.send(JSON.stringify({type:"ready"})); }catch(e){}
+    const b=$("readyBtn"); b.disabled=true; b.textContent="You're ready ✓";
+    const st=$("lStatus"); if(st) st.textContent="Waiting for opponent…";
+  });
+}
+function addChat(text, mine, who){
+  const box=$("lChat"); if(!box) return;
+  const div=document.createElement("div");
+  div.className="msg"+(mine?"":" them");
+  div.innerHTML=`<b>${esc(who||(mine?"You":"Them"))}:</b> ${esc(text)}`;
+  box.appendChild(div); box.scrollTop=box.scrollHeight;
+}
+function lobbyOppReady(){
+  const st=$("lStatus"); if(st) st.textContent="Opponent is ready! 🔥";
+  const box=$("lChat");
+  if(box){ const d=document.createElement("div"); d.className="sys"; d.textContent="Opponent hit ready"; box.appendChild(d); box.scrollTop=box.scrollHeight; }
 }
 function shareLink(code){
   return location.origin + location.pathname + "?join=" + code;
@@ -765,7 +941,7 @@ function startMatch(duration){
   S.duration=duration||60; S.startTs=performance.now()/1000;
   S.myReps=0; S.oppReps=0; lastSent=-1; lastSecond=-1;
   youScoreEl.textContent="0"; oppScoreEl.textContent="0";
-  S.phase="playing"; setStatus("Get ready"); setAgain("idle"); removeLeftNote(); resetPresence();
+  S.phase="playing"; setStatus("Get ready"); setAgain("idle"); removeLeftNote(); resetPresence(); clearInterval(lobbyTimer);
   centerEl.innerHTML='<div class="box"><div class="vsflash">VS</div></div>';
   tick();
   setTimeout(runCountdown, 700);
@@ -775,10 +951,12 @@ function runCountdown(){
   let i=0;
   (function step(){
     if(i>=seq.length){ centerEl.innerHTML=""; S.active=true; setStatus(exLabel()+" — go!"); startBeat();
-      const eb=$("exBanner"); eb.textContent="Perform "+exLabel()+"!"; eb.classList.add("on"); showPresence(true); return; }
+      const eb=$("exBanner"); eb.textContent="Perform "+exLabel()+"!"; eb.classList.add("on"); showPresence(true);
+      speak(exLabel()+"! Go!", true); return; }
     const [n,f]=seq[i++];
     centerEl.innerHTML=`<div class="box"><div class="bigcount">${n}</div></div>`;
     beep(f, n==="GO"?0.34:0.14, n==="GO"?"sawtooth":"square", 0.28);
+    if(n!=="GO") speak(n, true);
     setTimeout(step, n==="GO"?420:600);
   })();
 }
@@ -793,6 +971,11 @@ function tick(){
     lastSecond=sec;
     if(S.active && sec<=5 && sec>0) beep(520,0.07,"square",0.22);   // final-5 tension ticks
   }
+  // idle nudge: no reps for 10s -> "you there?" (owns the screen, throttled)
+  if(isIdle() && performance.now()-lastCalloutAt>3000){
+    flashCallout(pick(CALLOUTS.idle), "idle");
+    lastCalloutAt=performance.now();
+  }
   if(remaining<=0){ if(S.active){ whistle(); stopBeat(); $("exBanner").classList.remove("on"); } S.active=false; }
   requestAnimationFrame(tick);
 }
@@ -803,6 +986,7 @@ function endMatch(winner){
   const v=$("verdict");
   v.textContent=tie?"Draw":(iWon?"You win":"You lose");
   v.className="big "+(tie?"tie":(iWon?"w":"lose"));
+  speak(tie?"It's a draw!":(iWon?"You win!":"You lose!"), true);
   $("rYou").classList.toggle("win", iWon||tie);
   $("rOpp").classList.toggle("win", (!iWon&&!tie)||tie);
   $("crownYou").textContent=iWon?"👑":"";
@@ -889,7 +1073,7 @@ function opponentLeft(){
   }
 }
 function backToLanding(){
-  removeLeftNote(); busy=false;
+  removeLeftNote(); busy=false; clearInterval(lobbyTimer);
   S.phase="idle"; S.me=null; S.code=null; S.intent=null;
   try{ if(ws && ws.readyState===1) ws.send(JSON.stringify({type:"leave"})); }catch(e){}
   try{ if(ws) ws.close(); }catch(e){}
@@ -906,9 +1090,11 @@ function resetLandingButtons(){
 }
 async function enterGame(intent, code){
   if(busy) return;            // ignore double-taps / retries while a game is starting
+  const nm = $("name").value.trim();
+  if(!nm){ toast("Enter a tag first 💪"); $("name").focus(); return; }
   busy=true;
   initAudio();   // unlock audio on the user gesture
-  S.name=($("name").value.trim()||"You").slice(0,12);
+  S.name = nm.slice(0,12);
   $("youName").textContent=S.name;
   $("findBtn").disabled=true; $("createBtn").disabled=true; $("joinBtn").disabled=true;
   const active = intent==="quick" ? $("findBtn") : (intent==="create" ? $("createBtn") : $("joinBtn"));
@@ -994,6 +1180,14 @@ document.querySelectorAll(".bex").forEach(b=> b.addEventListener("click",()=>{
   document.querySelectorAll(".bex").forEach(x=>x.classList.remove("on")); b.classList.add("on");
   boardEx=b.dataset.bex; renderBoard();
 }));
+
+/* ---------- dismiss the intro splash after the animation ---------- */
+try{
+  const sp=$("splash");
+  if(sp){
+    setTimeout(()=>{ sp.style.opacity="0"; setTimeout(()=>{ sp.style.display="none"; }, 480); }, 2850);
+  }
+}catch(e){}
 
 /* ---------- decorative sparkles on the landing (guarded, non-critical) ---------- */
 try{
