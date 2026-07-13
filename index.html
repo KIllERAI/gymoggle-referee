@@ -121,18 +121,32 @@
   .opp-panel .opp-name{color:var(--opp);font-size:11px;letter-spacing:.16em;text-transform:uppercase}
   .opp-panel .score{font-family:"JetBrains Mono";font-weight:800;font-size:clamp(34px,9vw,52px);
     line-height:1;color:var(--opp);font-variant-numeric:tabular-nums;text-shadow:0 0 20px rgba(255,46,126,.4)}
-  .avatar{width:100%;height:120px;display:block;margin:2px 0}
-  .avatar .fig{transform-origin:50px 98px}
-  .avatar.ex-pushups .fig{transform-origin:50px 60px;transform:rotate(78deg)}
-  .avatar.ex-situps .fig{transform-origin:50px 74px;transform:rotate(-8deg)}
-  .avatar .fig *{stroke:var(--opp);stroke-width:5;stroke-linecap:round;fill:none}
-  .avatar .fig circle{fill:var(--opp);stroke:none}
+  .avatar{width:100%;height:120px;display:block;margin:2px 0;animation:idleBreathe 2.6s ease-in-out infinite}
+  @keyframes idleBreathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-2.5px)}}
+  .avatar .fig{transform-origin:50px 104px}
+  .avatar.ex-pushups .fig{transform-origin:50px 62px;transform:rotate(80deg)}
+  .avatar.ex-situps .fig{transform-origin:50px 78px;transform:rotate(-10deg)}
+  /* gorilla body = opponent color; face patch dark; features light */
+  .avatar .g-body{fill:var(--opp)}
+  .avatar .g-face{fill:rgba(13,11,20,.55)}
+  .avatar .g-eye{fill:var(--bone)} .avatar .g-pupil{fill:var(--void)}
+  .avatar .g-feat{fill:none;stroke:var(--bone);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+  .avatar .g-nostril{fill:rgba(13,11,20,.8)}
+  /* expression swapping (default neutral) */
+  .avatar .m-grin,.avatar .m-grit,.avatar .brow-strain,.avatar .brow-sad{display:none}
+  .avatar.mood-win  .m-flat{display:none} .avatar.mood-win  .m-grin{display:block}
+  .avatar.mood-win  .brow-neutral{display:none} .avatar.mood-win .brow-happy{display:block}
+  .avatar.mood-lose .m-flat{display:none} .avatar.mood-lose .m-grit{display:block}
+  .avatar.mood-lose .brow-neutral{display:none} .avatar.mood-lose .brow-strain{display:block}
+  .avatar .brow-happy{display:none}
+  .avatar.mood-win .brow-neutral{display:none}
+  /* exercise rep animation (on top of idle breathing) */
   .avatar.rep.ex-squats .fig{animation:repSquat .42s ease}
   .avatar.rep.ex-pushups .fig{animation:repPush .42s ease}
   .avatar.rep.ex-situps .fig{animation:repSit .42s ease}
-  @keyframes repSquat{0%,100%{transform:translateY(0) scaleY(1)}50%{transform:translateY(10px) scaleY(.72)}}
-  @keyframes repPush{0%,100%{transform:rotate(78deg) translateY(0)}50%{transform:rotate(78deg) translateY(10px)}}
-  @keyframes repSit{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(-46deg)}}
+  @keyframes repSquat{0%,100%{transform:translateY(0) scaleY(1)}45%{transform:translateY(16px) scaleY(.66)}}
+  @keyframes repPush{0%,100%{transform:rotate(80deg) translateY(0)}45%{transform:rotate(80deg) translateY(14px)}}
+  @keyframes repSit{0%,100%{transform:rotate(-10deg)}45%{transform:rotate(-52deg)}}
 
   .race{width:100%;padding:0 20px;display:flex;flex-direction:column;gap:7px;margin-bottom:12px;
     opacity:0;transition:opacity .3s}
@@ -301,6 +315,74 @@
     color:var(--void);background:linear-gradient(100deg,var(--you),var(--opp))}
   .lobby .l-ready:disabled{opacity:.6;cursor:default;filter:grayscale(.3)}
   .lobby .l-status{margin-top:8px;font-size:12px;color:var(--dim);min-height:16px}
+
+  /* ===== POST-MATCH CHAT (results, bottom-right) ===== */
+  .rchat{position:absolute;right:16px;bottom:16px;z-index:8;width:clamp(230px,42vw,300px);
+    background:rgba(13,11,20,.8);border:1px solid var(--line);border-radius:14px;padding:10px;backdrop-filter:blur(8px)}
+  .rchat-log{height:110px;overflow-y:auto;display:flex;flex-direction:column;gap:5px;margin-bottom:8px;
+    background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:9px;padding:7px 9px}
+  .rchat-log:empty::before{content:"Say something to your opponent…";color:var(--dim);font-size:12px;font-style:italic}
+  .rchat-log .msg{font-size:13px;line-height:1.35;word-break:break-word}
+  .rchat-log .msg b{color:var(--you)} .rchat-log .msg.them b{color:var(--opp)}
+  .rchat-inrow{display:flex;gap:7px}
+  .rchat-inrow input{flex:1;background:var(--void2);border:1px solid var(--line);color:var(--bone);
+    border-radius:9px;padding:9px;font-size:13px;font-family:inherit}
+  .rchat-inrow input:focus{outline:none;border-color:var(--you)}
+  .rchat-inrow button{padding:9px 13px;border:1px solid var(--line);border-radius:9px;
+    background:var(--void2);color:var(--bone);cursor:pointer;font-family:"Anton";font-size:13px}
+  @media (max-width:560px){
+    .rchat{ left:50%; right:auto; transform:translateX(-50%); bottom:92px; width:min(92vw,360px); }
+    .rchat-log{ height:74px; }
+    .resbtns{ bottom:18px; }
+  }
+
+  .load-tip{margin-top:18px;max-width:290px;font-size:13px;color:var(--gold);line-height:1.45;
+    transition:opacity .3s ease;min-height:38px;letter-spacing:.01em}
+  .dbg-hip{position:absolute;top:112px;left:50%;transform:translateX(-50%);z-index:7;display:none;
+    font-family:"JetBrains Mono";font-size:13px;color:var(--gold);background:rgba(13,11,20,.62);
+    padding:4px 12px;border-radius:8px;border:1px solid var(--line);white-space:nowrap}
+
+  /* ===== DAILY TASKS ===== */
+  #daily{justify-content:flex-start;padding:26px 18px;gap:14px;overflow-y:auto}
+  .d-head{display:flex;align-items:center;gap:14px;width:min(560px,94vw);margin-top:6px}
+  .d-head h2{font-family:"Anton";font-size:clamp(24px,7vw,38px);text-transform:uppercase;
+    background:linear-gradient(100deg,var(--you),var(--opp));-webkit-background-clip:text;background-clip:text;color:transparent}
+  #dailyBack{width:42px;height:42px;flex:none;border-radius:12px;border:1px solid var(--line);
+    background:var(--void2);color:var(--bone);font-size:20px;cursor:pointer}
+  .d-stats{display:flex;gap:10px;width:min(560px,94vw)}
+  .d-stat{flex:1;background:var(--void2);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
+  .d-stat b{display:block;font-family:"JetBrains Mono";font-size:22px;font-weight:800;color:var(--gold)}
+  .d-stat span{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+  .d-list{width:min(560px,94vw);display:flex;flex-direction:column;gap:10px}
+  .d-task{display:flex;align-items:center;gap:14px;padding:15px 16px;border-radius:14px;
+    background:var(--void2);border:1px solid var(--line);cursor:pointer;transition:border-color .2s}
+  .d-task:hover{border-color:var(--you)}
+  .d-task .d-ico{font-size:24px;width:34px;text-align:center}
+  .d-task .d-txt{flex:1}
+  .d-task .d-txt b{display:block;font-size:16px}
+  .d-task .d-txt small{color:var(--dim);font-size:12px}
+  .d-task .d-coin{font-family:"JetBrains Mono";font-weight:800;color:var(--gold);font-size:14px}
+  .d-task.done{border-color:var(--you);background:rgba(34,224,214,.1);cursor:default}
+  .d-task.done .d-coin{color:var(--you)}
+  .d-note{width:min(560px,94vw);text-align:center;color:var(--dim);font-size:12px;margin-top:4px}
+  .d-all{width:min(560px,94vw);text-align:center;color:var(--gold);font-family:"Anton";
+    font-size:20px;text-transform:uppercase;padding:12px;border:1px solid var(--gold);
+    border-radius:12px;background:rgba(255,210,63,.1)}
+
+  /* ===== SOLO MODE (task run) ===== */
+  .solo-hud{position:absolute;top:0;left:0;right:0;z-index:6;padding:16px;
+    display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none}
+  .solo-title{font-family:"Anton";font-size:clamp(20px,5vw,30px);text-transform:uppercase;color:var(--bone);
+    text-shadow:0 2px 14px rgba(0,0,0,.7)}
+  .solo-count{font-family:"JetBrains Mono";font-weight:800;font-size:clamp(46px,13vw,80px);
+    line-height:1;color:var(--you);font-variant-numeric:tabular-nums;text-shadow:0 0 26px rgba(34,224,214,.45)}
+  .solo-count b{color:var(--dim);font-size:.4em}
+  .solo-bar{width:min(420px,86vw);height:12px;background:rgba(255,255,255,.1);border-radius:6px;overflow:hidden}
+  .solo-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--you),var(--gold));
+    border-radius:6px;transition:width .25s ease}
+  #soloQuit{position:absolute;top:16px;left:16px;z-index:8;pointer-events:auto;
+    background:var(--void2);border:1px solid var(--line);color:var(--bone);
+    padding:9px 14px;border-radius:10px;cursor:pointer;font-size:13px}
 </style>
 </head>
 <body>
@@ -343,6 +425,7 @@
         <input id="joinCode" maxlength="4" placeholder="CODE" autocomplete="off" />
         <button id="joinBtn" class="btn ghost">Join</button>
       </div>
+      <button id="dailyBtn" class="btn ghost wide">📅 Daily Tasks</button>
       <button id="boardBtn" class="btn ghost wide">🏆 Leaderboard</button>
     </div>
     <p class="fineprint">Find a random opponent, or create a game and share the code with a friend.
@@ -367,6 +450,21 @@
     <div class="board-list" id="boardList"></div>
   </section>
 
+  <!-- ===== DAILY TASKS ===== -->
+  <section id="daily" class="screen">
+    <div class="d-head">
+      <button id="dailyBack">←</button>
+      <h2>Daily Tasks</h2>
+    </div>
+    <div class="d-stats">
+      <div class="d-stat"><b id="dCoins">0</b><span>🪙 Coins</span></div>
+      <div class="d-stat"><b id="dStreak">0</b><span>🔥 Day Streak</span></div>
+      <div class="d-stat"><b id="dDone">0/3</b><span>✅ Today</span></div>
+    </div>
+    <div class="d-list" id="dList"></div>
+    <p class="d-note">New tasks every day — same for everyone. Clear all 3 for a bonus and keep your streak alive.</p>
+  </section>
+
   <!-- ===== GAME ===== -->
   <section id="game" class="screen">
     <div class="stage">
@@ -375,6 +473,7 @@
       <div class="hud">
         <button id="muteBtn" class="mute">🔊</button>
         <div id="exBanner" class="exbanner"></div>
+        <div id="dbgHip" class="dbg-hip"></div>
         <div class="corners">
           <div class="corner l"><span class="who" id="youName">You</span><span class="score" id="youScore">0</span></div>
         </div>
@@ -383,12 +482,39 @@
           <div class="opp-name">Opponent</div>
           <svg class="avatar" id="oppAvatar" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
             <g class="fig">
-              <circle cx="50" cy="20" r="10"/>
-              <line x1="50" y1="30" x2="50" y2="68"/>
-              <line x1="50" y1="42" x2="33" y2="56"/>
-              <line x1="50" y1="42" x2="67" y2="56"/>
-              <line x1="50" y1="68" x2="37" y2="98"/>
-              <line x1="50" y1="68" x2="63" y2="98"/>
+              <!-- arms + fists -->
+              <rect class="g-body" x="11" y="50" width="15" height="48" rx="7"/>
+              <rect class="g-body" x="74" y="50" width="15" height="48" rx="7"/>
+              <circle class="g-body" cx="18" cy="99" r="8"/>
+              <circle class="g-body" cx="82" cy="99" r="8"/>
+              <!-- legs + feet -->
+              <rect class="g-body" x="35" y="92" width="13" height="24" rx="6"/>
+              <rect class="g-body" x="52" y="92" width="13" height="24" rx="6"/>
+              <ellipse class="g-body" cx="40" cy="116" rx="9" ry="5"/>
+              <ellipse class="g-body" cx="60" cy="116" rx="9" ry="5"/>
+              <!-- torso -->
+              <ellipse class="g-body" cx="50" cy="73" rx="28" ry="26"/>
+              <!-- head: crest, ears, skull -->
+              <ellipse class="g-body" cx="50" cy="13" rx="9" ry="7"/>
+              <circle class="g-body" cx="29" cy="29" r="6"/>
+              <circle class="g-body" cx="71" cy="29" r="6"/>
+              <ellipse class="g-body" cx="50" cy="31" rx="21" ry="20"/>
+              <!-- face -->
+              <ellipse class="g-face" cx="50" cy="34" rx="14" ry="15"/>
+              <circle class="g-eye" cx="43" cy="30" r="3.6"/>
+              <circle class="g-eye" cx="57" cy="30" r="3.6"/>
+              <circle class="g-pupil" cx="43.5" cy="30.5" r="1.8"/>
+              <circle class="g-pupil" cx="57.5" cy="30.5" r="1.8"/>
+              <ellipse class="g-nostril" cx="46" cy="38" rx="1.6" ry="2.2"/>
+              <ellipse class="g-nostril" cx="54" cy="38" rx="1.6" ry="2.2"/>
+              <!-- brows (swap by mood) -->
+              <path class="g-feat brow-neutral" d="M38,24 L47,23 M53,23 L62,24"/>
+              <path class="g-feat brow-happy" d="M38,24 Q42,20 47,22 M53,22 Q58,20 62,24"/>
+              <path class="g-feat brow-strain" d="M38,22 L47,26 M53,26 L62,22"/>
+              <!-- mouths (swap by mood) -->
+              <path class="g-feat m-flat" d="M44,44 L56,44"/>
+              <path class="g-feat m-grin" d="M42,43 Q50,51 58,43"/>
+              <path class="g-feat m-grit" d="M43,44 H57 M46,42 V46 M50,42 V46 M54,42 V46"/>
             </g>
           </svg>
           <div class="score" id="oppScore">0</div>
@@ -406,6 +532,12 @@
         </div>
       </div>
       <div class="center" id="center"></div>
+      <div class="solo-hud" id="soloHud" style="display:none">
+        <div class="solo-title" id="soloTitle">Squats</div>
+        <div class="solo-count"><span id="soloNow">0</span><b> / <span id="soloTarget">15</span></b></div>
+        <div class="solo-bar"><i id="soloBar"></i></div>
+      </div>
+      <button id="soloQuit" style="display:none">← Quit</button>
     </div>
   </section>
 
@@ -419,6 +551,13 @@
     <div class="resbtns">
       <button class="again" id="againBtn">Play again</button>
       <button class="exit" id="exitBtn">Exit</button>
+    </div>
+    <div class="rchat" id="rChatBox">
+      <div class="rchat-log" id="rChat"></div>
+      <div class="rchat-inrow">
+        <input id="rChatInput" maxlength="200" placeholder="Say something…" autocomplete="off" />
+        <button id="rChatSend">Send</button>
+      </div>
     </div>
   </section>
 
@@ -436,7 +575,7 @@ const SERVER_URL = params.get("server") || DEFAULT_SERVER;
 const JOIN_CODE = (params.get("join") || "").toUpperCase().slice(0,4);
 
 const $ = id => document.getElementById(id);
-const screens = { landing:$("landing"), game:$("game"), results:$("results"), board:$("board") };
+const screens = { landing:$("landing"), game:$("game"), results:$("results"), board:$("board"), daily:$("daily") };
 function show(name){ for(const k in screens) screens[k].classList.toggle("on", k===name); }
 
 const video=$("video"), overlay=$("overlay"), octx=overlay.getContext("2d");
@@ -586,6 +725,18 @@ function angle(a,b,c){
 let stage="up", flash=0;
 const vis = lm => (lm.visibility==null ? 1 : lm.visibility);
 
+/* ============================================================
+   >>> PUSH-UP ANTI-CHEAT: HIP ANGLE THRESHOLD <<<  (TUNE ME)
+   Real push-up  = body flat/straight -> hip angle (shoulder-hip-knee) ~180.
+   Knee push-up  = hips pike up        -> hip angle noticeably lower.
+   A rep only counts if the hip stays STRAIGHTER than this many degrees.
+   Raise it = stricter (harder to fake). Lower it = more lenient.
+   ============================================================ */
+let PUSHUP_HIP_MIN = 155;   // <<< CHANGE THIS NUMBER to tune the knee-push-up gate
+let PUSHUP_UP_ELBOW = 150;  // <<< arms straighter than this = "up" (top of push-up)
+let PUSHUP_DOWN_ELBOW = 100;// <<< arms bent tighter than this = "down" (bottom of push-up)
+const SHOW_HIP_DEBUG = true; // <<< shows the live hip angle on screen during push-ups; set false when done tuning
+
 /* ---- Per-exercise detection. Each measure() returns:
    {ok:false}                       -> body not framed well enough
    {ok:true, down:bool, up:bool, draw:[[a,b],...]}   -> current pose state
@@ -613,19 +764,26 @@ const EXERCISES = {
       const sides=[[11,23,25,13,15],[12,24,26,14,16]]; // shoulder,hip,knee,elbow,wrist
       let best=null,bv=-1;
       for(const a of sides){
-        const v=Math.min(vis(lms[a[0]]),vis(lms[a[1]]),vis(lms[a[4]]));
+        const v=Math.min(vis(lms[a[0]]),vis(lms[a[1]]),vis(lms[a[3]]),vis(lms[a[4]]));
         if(v>bv){bv=v;best=a;}
       }
       if(bv<0.5) return {ok:false};
       const [sh,hip,kn,el,wr]=best;
-      const S_=lms[sh], H=lms[hip], W=lms[wr];
-      // ORIENTATION GATE: body must be roughly HORIZONTAL (a plank).
-      // Standing is vertical -> blocked, so standing + arm-bending can't score.
+      const S_=lms[sh], H=lms[hip];
+      // GATE 1 — ORIENTATION: body must be roughly HORIZONTAL (a plank). Standing is vertical -> blocked.
       if(Math.abs(H.x - S_.x) < Math.abs(H.y - S_.y)) return {ok:false, warnMsg:"Get horizontal — this is a plank position"};
-      const torso=Math.hypot(S_.x-H.x, S_.y-H.y)||0.001;
-      const elevation=(W.y - S_.y)/torso;   // shoulder height above hands (in torso-lengths)
-      // up = pressed high off the floor; down = chest lowered near the floor
-      return {ok:true, up:elevation>0.85, down:elevation<0.5,
+
+      // GATE 2 — HIP ANGLE ANTI-CHEAT (shoulder-hip-knee): straight(~180)=real, piked=knee push-up -> blocked.
+      const hipAngle = angle(S_, H, lms[kn]);
+      window.__hipAngle = hipAngle;
+      if(hipAngle < PUSHUP_HIP_MIN) return {ok:false, hip:hipAngle, warnMsg:"Straighten your body — no knee push-ups!"};
+
+      // UP/DOWN — ELBOW ANGLE (shoulder-elbow-wrist): extended=up, bent=down. Reliable now that the
+      // two gates above block standing/knee cheats.
+      const elbow = angle(lms[sh], lms[el], lms[wr]);
+      window.__elbowAngle = elbow;
+      return {ok:true, hip:hipAngle, elbow:elbow,
+              up: elbow > PUSHUP_UP_ELBOW, down: elbow < PUSHUP_DOWN_ELBOW,
               draw:[[sh,el],[el,wr],[sh,hip],[hip,kn]]};
     }
   },
@@ -647,17 +805,44 @@ const EXERCISES = {
       const lyingFlat = Math.abs(H.x - S_.x) > Math.abs(H.y - S_.y);
       return {ok:true, down:(ang>140 && lyingFlat), up:ang<75, draw:[[s,h],[h,k]]};
     }
+  },
+  jacks: {
+    label:"Jumping Jacks", warn:"Step back — whole body in frame",
+    // OPEN  = hands above head AND feet apart.  CLOSED = hands down AND feet together.
+    // Both conditions required, so waving arms alone (or shuffling feet alone) won't count.
+    measure(lms){
+      const need=[11,12,15,16,27,28];
+      for(const i of need){ if(vis(lms[i])<0.5) return {ok:false}; }
+      const shY=(lms[11].y+lms[12].y)/2;
+      const shW=Math.abs(lms[11].x-lms[12].x)||0.001;
+      const wrY=(lms[15].y+lms[16].y)/2;              // wrists (y grows downward)
+      const ankSpread=Math.abs(lms[27].x-lms[28].x)/shW;   // in shoulder-widths
+      const handsUp   = wrY < shY;                    // wrists above shoulders
+      const handsDown = wrY > shY + 0.10;             // wrists well below shoulders
+      const feetApart = ankSpread > 1.30;
+      const feetTogether = ankSpread < 0.95;
+      // "down" = the OPEN (star) pose, "up" = back to CLOSED. One full cycle = 1 rep.
+      return {ok:true, down:(handsUp && feetApart), up:(handsDown && feetTogether),
+              draw:[[11,13],[13,15],[12,14],[14,16],[23,25],[25,27],[24,26],[26,28]]};
+    }
   }
 };
 
 function processPose(lms){
   const cfg = EXERCISES[S.exercise] || EXERCISES.squats;
   const m = cfg.measure(lms);
-  if(!m.ok){ if(S.active) setStatus(cfg.warn,true); return {down:false, draw:null}; }
+  // live hip-angle readout (push-ups only) so you can tune PUSHUP_HIP_MIN by eye
+  if(SHOW_HIP_DEBUG && S.exercise==="pushups"){
+    const d=$("dbgHip");
+    if(d){ const h=(m.hip!=null?Math.round(m.hip):"—"), e=(m.elbow!=null?Math.round(m.elbow):"—");
+      d.textContent = "hip "+h+"°  ·  elbow "+e+"°   (hip>"+PUSHUP_HIP_MIN+"  up>"+PUSHUP_UP_ELBOW+"  down<"+PUSHUP_DOWN_ELBOW+")"; }
+  }
+  if(!m.ok){ if(S.active) setStatus(m.warnMsg||cfg.warn,true); return {down:false, draw:null}; }
   if(m.down){ stage="down"; }
   if(m.up && stage==="down"){
     stage="up"; flash=8;
-    if(S.active){
+    if(SOLO.on){ soloRep(); }
+    else if(S.active){
       S.myReps++; youScoreEl.textContent=S.myReps; pushReps();
       repPop(); oppRun=0; myLastRepTs=performance.now(); updatePresence();
       youScoreEl.style.transform="scale(1.25)";
@@ -794,12 +979,19 @@ const CALLOUTS = {
 };
 const pick = arr => arr[Math.floor(Math.random()*arr.length)];
 let prevLead=0, lastCalloutAt=0, oppRun=0, myLastRepTs=0;
-const IDLE_MS=10000;   // no reps for 10s -> "you there?" nudge
+const IDLE_MS=15000;   // no reps for 15s -> "you there?" nudge
 const isIdle = () => S.active && (performance.now()-myLastRepTs > IDLE_MS);
 
 function oppRepPump(){
   const a=$("oppAvatar"); if(!a) return;
-  a.classList.remove("rep"); void a.offsetWidth; a.classList.add("rep");
+  a.classList.remove("rep");
+  // restart the CSS animation reliably — offsetWidth reflow is flaky on SVG, so use double rAF
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ a.classList.add("rep"); }));
+}
+function setOppMood(m){
+  const a=$("oppAvatar"); if(!a) return;
+  a.classList.remove("mood-win","mood-lose","mood-neutral");
+  a.classList.add("mood-"+m);
 }
 function flashCallout(text,tone){
   const c=$("callout"); if(!c) return;
@@ -813,6 +1005,7 @@ function updatePresence(){
   const yb=$("youBar"), ob=$("oppBar");
   if(yb) yb.style.width=(you/max*100)+"%";
   if(ob) ob.style.width=(opp/max*100)+"%";
+  setOppMood(opp>you?"win":(opp<you?"lose":"neutral"));   // gorilla grins when winning, grits when losing
   if(!S.active) return;
   const now=performance.now(), diff=you-opp;
   const lead = diff>0?1:(diff<0?-1:0);
@@ -834,19 +1027,53 @@ function resetPresence(){
   const yb=$("youBar"), ob=$("oppBar"); if(yb) yb.style.width="0%"; if(ob) ob.style.width="0%";
   $("callout").classList.remove("show");
   $("oppAvatar").setAttribute("class","avatar ex-"+S.exercise);   // SVG className is read-only; use setAttribute
+  const dh=$("dbgHip"); if(dh) dh.style.display = (SHOW_HIP_DEBUG && S.exercise==="pushups") ? "block" : "none";
 }
 function showPresence(on){
   $("oppPanel").classList.toggle("on",on);
   $("raceWrap").classList.toggle("on",on);
 }
 function centerWait(title, sub){
-  centerEl.innerHTML=`<div class="box"><div class="spin"></div><p>${title}</p><small>${sub||""}</small></div>`;
+  centerEl.innerHTML=`<div class="box"><div class="spin"></div><p>${title}</p><small>${sub||""}</small>
+    <div class="load-tip" id="loadTip"></div></div>`;
+  startTips();
 }
+
+/* ---------- rotating loading tips ---------- */
+const TIPS = [
+  "Both knees must bend for a squat to count — no half-reps!",
+  "Push-ups need you horizontal — no standing and flapping. 😤",
+  "Stand back so your whole body fits in the camera.",
+  "Good lighting means better rep detection.",
+  "Rattle your opponent with some trash talk in the lobby.",
+  "Both players hit READY to skip the countdown and start early.",
+  "Your rival's gorilla grins when they're winning — wipe that smile off.",
+  "Go idle for 15 seconds and the game WILL call you out.",
+  "Your best score per exercise lands you on the leaderboard.",
+  "Pace yourself — 35 seconds is longer than it looks.",
+  "Camera never leaves your device — only your rep count is sent.",
+];
+let tipTimer=null, tipIdx=0;
+function startTips(){
+  clearInterval(tipTimer);
+  const el=$("loadTip"); if(!el) return;
+  tipIdx=Math.floor(Math.random()*TIPS.length);
+  el.textContent="💡 "+TIPS[tipIdx];
+  tipTimer=setInterval(()=>{
+    const e=$("loadTip"); if(!e){ clearInterval(tipTimer); tipTimer=null; return; }
+    tipIdx=(tipIdx+1)%TIPS.length;
+    e.style.opacity="0";
+    setTimeout(()=>{ const x=$("loadTip"); if(x){ x.textContent="💡 "+TIPS[tipIdx]; x.style.opacity="1"; } },300);
+  }, 3800);
+}
+function stopTips(){ clearInterval(tipTimer); tipTimer=null; }
 function showSearching(){
   centerEl.innerHTML=`<div class="box"><div class="spin"></div>
     <p>Finding an opponent</p><small>${exLabel()} · matching you with someone…</small>
+    <div class="load-tip" id="loadTip"></div>
     <button class="btn" id="cancelBtn">Cancel</button></div>`;
   setStatus("Searching…");
+  startTips();
   const c=$("cancelBtn");
   if(c) c.addEventListener("click",()=>{
     try{ if(ws && ws.readyState===1) ws.send(JSON.stringify({type:"cancel"})); }catch(e){}
@@ -858,7 +1085,7 @@ function showSearching(){
 let lobbyTimer=null, lobbyReady=false;
 const esc = s => (s||"").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function openLobby(duration){
-  S.phase="lobby"; lobbyReady=false;
+  S.phase="lobby"; lobbyReady=false; stopTips();
   setStatus("Get ready");
   centerEl.innerHTML=`<div class="lobby">
     <div class="l-title">Get Ready</div>
@@ -898,7 +1125,8 @@ function openLobby(duration){
   });
 }
 function addChat(text, mine, who){
-  const box=$("lChat"); if(!box) return;
+  const box = (S.phase==="done") ? $("rChat") : $("lChat");
+  if(!box) return;
   const div=document.createElement("div");
   div.className="msg"+(mine?"":" them");
   div.innerHTML=`<b>${esc(who||(mine?"You":"Them"))}:</b> ${esc(text)}`;
@@ -941,7 +1169,7 @@ function startMatch(duration){
   S.duration=duration||60; S.startTs=performance.now()/1000;
   S.myReps=0; S.oppReps=0; lastSent=-1; lastSecond=-1;
   youScoreEl.textContent="0"; oppScoreEl.textContent="0";
-  S.phase="playing"; setStatus("Get ready"); setAgain("idle"); removeLeftNote(); resetPresence(); clearInterval(lobbyTimer);
+  S.phase="playing"; setStatus("Get ready"); setAgain("idle"); removeLeftNote(); resetPresence(); clearInterval(lobbyTimer); stopTips();
   centerEl.innerHTML='<div class="box"><div class="vsflash">VS</div></div>';
   tick();
   setTimeout(runCountdown, 700);
@@ -992,6 +1220,7 @@ function endMatch(winner){
   $("crownYou").textContent=iWon?"👑":"";
   $("crownOpp").textContent=(!iWon&&!tie)?"👑":"";
   setAgain("idle");
+  const rc=$("rChat"); if(rc) rc.innerHTML="";
   show("results");
   // juice: count the scores up, play a sting, throw confetti for a win
   countUp($("rYouScore"), S.myReps);
@@ -1073,7 +1302,7 @@ function opponentLeft(){
   }
 }
 function backToLanding(){
-  removeLeftNote(); busy=false; clearInterval(lobbyTimer);
+  removeLeftNote(); busy=false; clearInterval(lobbyTimer); stopTips();
   S.phase="idle"; S.me=null; S.code=null; S.intent=null;
   try{ if(ws && ws.readyState===1) ws.send(JSON.stringify({type:"leave"})); }catch(e){}
   try{ if(ws) ws.close(); }catch(e){}
@@ -1139,6 +1368,19 @@ $("againBtn").addEventListener("click", ()=>{
 });
 $("exitBtn").addEventListener("click", ()=> backToLanding());
 
+/* post-match chat (results screen) — shares the same relay as the lobby chat */
+(function wireResultsChat(){
+  const send=()=>{
+    const inp=$("rChatInput"); if(!inp) return;
+    const txt=inp.value.trim(); if(!txt) return;
+    try{ if(ws&&ws.readyState===1) ws.send(JSON.stringify({type:"chat", text:txt})); }catch(e){}
+    inp.value="";
+  };
+  const s=$("rChatSend"), i=$("rChatInput");
+  if(s) s.addEventListener("click", send);
+  if(i) i.addEventListener("keydown", e=>{ if(e.key==="Enter") send(); });
+})();
+
 function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("on"); setTimeout(()=>t.classList.remove("on"),4000); }
 
 /* ---------- leaderboard ---------- */
@@ -1172,6 +1414,115 @@ function renderBoard(){
 }
 $("boardBtn").addEventListener("click", openBoard);
 $("boardBack").addEventListener("click", ()=> show("landing"));
+
+/* ---------- DAILY TASKS ---------- */
+const EX_ICON = { squats:"🏋️", pushups:"💪", situps:"🔥", jacks:"⭐" };
+let DAILY = null;
+
+async function openDaily(){
+  show("daily");
+  $("dList").innerHTML = `<div class="lb-empty">Loading today's tasks…</div>`;
+  try{
+    const r = await fetch(HTTP_BASE + "/daily?pid=" + encodeURIComponent(PID));
+    DAILY = await r.json();
+    renderDaily();
+  }catch(e){
+    $("dList").innerHTML = `<div class="lb-empty">Couldn't load tasks.<br>(Server may be waking — try again in a moment.)</div>`;
+  }
+}
+function renderDaily(){
+  if(!DAILY || !DAILY.ok){ $("dList").innerHTML = `<div class="lb-empty">Couldn't load tasks.</div>`; return; }
+  const done = new Set(DAILY.done||[]);
+  $("dCoins").textContent  = DAILY.coins||0;
+  $("dStreak").textContent = DAILY.streak||0;
+  $("dDone").textContent   = done.size+"/3";
+  $("dList").innerHTML = (DAILY.tasks||[]).map(t=>{
+    const isDone = done.has(t.idx);
+    const label = (EXERCISES[t.exercise]||{label:t.exercise}).label;
+    return `<div class="d-task${isDone?" done":""}" data-idx="${t.idx}">
+      <div class="d-ico">${EX_ICON[t.exercise]||"🎯"}</div>
+      <div class="d-txt"><b>${t.target} ${label}</b>
+        <small>${isDone?"Completed ✓":"Tap to start"}</small></div>
+      <div class="d-coin">${isDone?"✓":"+"+t.coins+" 🪙"}</div>
+    </div>`;
+  }).join("") + (done.size>=3 ? `<div class="d-all">🔥 All done — streak ${DAILY.streak}!</div>` : "");
+  document.querySelectorAll(".d-task").forEach(el=>{
+    if(el.classList.contains("done")) return;
+    el.addEventListener("click", ()=>{
+      const t = DAILY.tasks.find(x=>x.idx===+el.dataset.idx);
+      if(t) startSolo(t);
+    });
+  });
+}
+$("dailyBtn").addEventListener("click", openDaily);
+$("dailyBack").addEventListener("click", ()=> show("landing"));
+
+/* ---------- SOLO MODE (run one daily task, no opponent) ---------- */
+const SOLO = { on:false, task:null, reps:0 };
+
+async function startSolo(task){
+  if(busy) return;
+  busy = true;
+  initAudio();
+  try{
+    if(!landmarker) await initModel();
+    await initCamera();
+  }catch(e){
+    busy=false;
+    toast(e.name==="NotAllowedError" ? "Camera blocked — allow access and try again." : "Couldn't start camera. "+e.message);
+    return;
+  }
+  SOLO.on=true; SOLO.task=task; SOLO.reps=0;
+  S.exercise = task.exercise;
+  stage="up";
+  const label=(EXERCISES[task.exercise]||{label:task.exercise}).label;
+  $("soloTitle").textContent = label;
+  $("soloTarget").textContent = task.target;
+  $("soloNow").textContent = "0";
+  $("soloBar").style.width = "0%";
+  $("soloHud").style.display = "flex";
+  $("soloQuit").style.display = "block";
+  showPresence(false);
+  show("game");
+  if(!looping){ looping=true; loop(); }
+  setStatus(label+" — go!");
+  speak(label+"! Go!", true);
+}
+function soloRep(){
+  SOLO.reps++;
+  $("soloNow").textContent = SOLO.reps;
+  const pct = Math.min(100, SOLO.reps/SOLO.task.target*100);
+  $("soloBar").style.width = pct+"%";
+  repPop();
+  if(SOLO.reps >= SOLO.task.target) finishSolo();
+}
+async function finishSolo(){
+  const task = SOLO.task, reps = SOLO.reps;
+  endSolo();
+  confettiBurst && confettiBurst();
+  speak("Task complete!", true);
+  toast("Task complete! 🪙");
+  try{
+    const r = await fetch(HTTP_BASE + "/daily/complete", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ pid:PID, name:S.name||($("name").value.trim()||"Player"),
+                             task_idx:task.idx, exercise:task.exercise, reps:reps })
+    });
+    const d = await r.json();
+    if(d.ok){
+      if(d.earned) toast("+"+d.earned+" coins!");
+      if(d.all_done) speak("All daily tasks complete! Streak "+d.streak, true);
+    }
+  }catch(e){}
+  openDaily();   // refresh the board
+}
+function endSolo(){
+  SOLO.on=false; busy=false;
+  $("soloHud").style.display="none";
+  $("soloQuit").style.display="none";
+  setStatus("");
+}
+$("soloQuit").addEventListener("click", ()=>{ endSolo(); show("daily"); });
 document.querySelectorAll(".btab").forEach(b=> b.addEventListener("click",()=>{
   document.querySelectorAll(".btab").forEach(x=>x.classList.remove("on")); b.classList.add("on");
   boardTab=b.dataset.tab; renderBoard();

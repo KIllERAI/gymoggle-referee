@@ -2089,5 +2089,122 @@ def leaderboard():
         return {"ok": False, "error": str(e)}
 
 
+# ============================ DAILY TASKS ============================
+# Three tasks a day, the SAME for everyone in the world, derived from the date.
+
+import datetime, hashlib
+
+DAILY_POOL = [
+    ("squats",   [15, 20, 25, 30]),
+    ("pushups",  [8, 10, 12, 15]),
+    ("jacks",    [20, 25, 30, 40]),
+    ("situps",   [10, 15, 20]),
+]
+COINS_PER_TASK = 10
+COINS_ALL_DONE = 25          # bonus for clearing all three
+
+
+def todays_tasks(day: str):
+    """Deterministic from the date -> everyone on earth gets the same 3 tasks."""
+    seed = int(hashlib.sha256(day.encode()).hexdigest(), 16)
+    picks, pool = [], list(DAILY_POOL)
+    for i in range(3):
+        ex, targets = pool.pop(seed % len(pool))
+        seed //= max(1, len(pool) + 1)
+        target = targets[seed % len(targets)]
+        seed //= len(targets)
+        picks.append({"idx": i, "exercise": ex, "target": target,
+                      "coins": COINS_PER_TASK})
+    return picks
+
+
+@app.get("/daily")
+def daily(pid: str = ""):
+    day = datetime.date.today().isoformat()
+    tasks = todays_tasks(day)
+    out = {"ok": True, "day": day, "tasks": tasks, "done": [],
+           "coins": 0, "streak": 0, "all_done": False}
+    if not supabase or not pid:
+        return out
+    try:
+        d = supabase.table("daily_done").select("task_idx") \
+            .eq("pid", pid).eq("day", day).execute()
+        out["done"] = sorted({r["task_idx"] for r in d.data})
+        p = supabase.table("players").select("coins,daily_streak").eq("id", pid).execute()
+        if p.data:
+            out["coins"] = p.data[0].get("coins") or 0
+            out["streak"] = p.data[0].get("daily_streak") or 0
+        out["all_done"] = len(out["done"]) >= 3
+        return out
+    except Exception as e:
+        out["error"] = str(e)
+        return out
+
+
+@app.post("/daily/complete")
+def daily_complete(payload: dict):
+    """Body: {pid, name, task_idx, exercise, reps}"""
+    if not supabase:
+        return {"ok": False, "error": "no db"}
+    pid = (payload.get("pid") or "").strip()
+    if not pid:
+        return {"ok": False, "error": "no pid"}
+    day = datetime.date.today().isoformat()
+    tasks = todays_tasks(day)
+    try:
+        idx = int(payload.get("task_idx", -1))
+        task = next((t for t in tasks if t["idx"] == idx), None)
+        if not task:
+            return {"ok": False, "error": "bad task"}
+        reps = int(payload.get("reps", 0))
+        # server-side sanity: must actually hit the target
+        if reps < task["target"]:
+            return {"ok": False, "error": "target not met"}
+
+        # already done today? (unique constraint also protects us)
+        prev = supabase.table("daily_done").select("task_idx") \
+            .eq("pid", pid).eq("day", day).execute()
+        done_idx = {r["task_idx"] for r in prev.data}
+        if idx in done_idx:
+            return {"ok": True, "already": True}
+
+        supabase.table("daily_done").insert({
+            "pid": pid, "day": day, "task_idx": idx,
+            "exercise": task["exercise"], "reps": reps}).execute()
+        done_idx.add(idx)
+
+        # ---- coins + streak ----
+        row = supabase.table("players").select("*").eq("id", pid).execute()
+        p = row.data[0] if row.data else {}
+        coins = (p.get("coins") or 0) + COINS_PER_TASK
+        streak = p.get("daily_streak") or 0
+        best = p.get("best_daily_streak") or 0
+        last = p.get("last_daily")
+        all_done = len(done_idx) >= 3
+
+        if all_done:
+            coins += COINS_ALL_DONE
+            yesterday = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+            if last == day:
+                pass                      # streak already counted today
+            elif last == yesterday:
+                streak += 1
+            else:
+                streak = 1
+            best = max(best, streak)
+
+        upd = {"id": pid, "name": payload.get("name") or p.get("name") or "Player",
+               "coins": coins, "daily_streak": streak, "best_daily_streak": best}
+        if all_done:
+            upd["last_daily"] = day
+        supabase.table("players").upsert(upd).execute()
+
+        return {"ok": True, "coins": coins, "streak": streak,
+                "all_done": all_done, "done": sorted(done_idx),
+                "earned": COINS_PER_TASK + (COINS_ALL_DONE if all_done else 0)}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
 if __name__ == "__main__":
     uvicorn.run("server:app", host="0.0.0.0", port=8000)
