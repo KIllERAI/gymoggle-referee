@@ -21,7 +21,9 @@ const vis = lm => (lm.visibility==null ? 1 : lm.visibility);
    ============================================================ */
 let PUSHUP_HIP_MIN = 155;   // <<< CHANGE THIS NUMBER to tune the knee-push-up gate
 let PUSHUP_UP_ELBOW = 150;  // <<< arms straighter than this = "up" (top of push-up)
-let PUSHUP_DOWN_ELBOW = 100;// <<< arms bent tighter than this = "down" (bottom of push-up)
+let PUSHUP_DOWN_ELBOW = 100;
+let PLANK_HIP_MIN = 150;    // <<< hip must stay straighter than this. Sag/pike = broken plank.
+const PLANK_GRACE = 1.2;    // <<< seconds of broken form before the plank counts as FAILED// <<< arms bent tighter than this = "down" (bottom of push-up)
 const SHOW_HIP_DEBUG = true; // <<< shows the live hip angle on screen during push-ups; set false when done tuning
 
 /* ---- Per-exercise detection. Each measure() returns:
@@ -93,6 +95,32 @@ const EXERCISES = {
       return {ok:true, down:(ang>140 && lyingFlat), up:ang<75, draw:[[s,h],[h,k]]};
     }
   },
+  plank: {
+    label:"Plank", warn:"Get into a plank — side-on to the camera",
+    hold:true,                     // <-- this exercise is a HOLD, not reps
+    // Reuses the two push-up gates: body must be HORIZONTAL and the hip must stay
+    // STRAIGHT. Sagging or piking the hips = broken form. Same anti-cheat, no timer.
+    measure(lms){
+      const sides=[[11,23,25],[12,24,26]];   // shoulder, hip, knee
+      let best=null, bv=-1;
+      for(const a of sides){
+        const v=Math.min(vis(lms[a[0]]),vis(lms[a[1]]),vis(lms[a[2]]));
+        if(v>bv){bv=v;best=a;}
+      }
+      if(bv<0.5) return {ok:false, warnMsg:"Step back — whole body side-on to the camera"};
+      const [sh,hip,kn]=best;
+      const S_=lms[sh], H=lms[hip];
+      // GATE 1 — horizontal (a plank is a horizontal body). Standing = blocked.
+      if(Math.abs(H.x - S_.x) < Math.abs(H.y - S_.y))
+        return {ok:true, holding:false, warnMsg:"Get horizontal — plank position"};
+      // GATE 2 — straight hip. Sag or pike breaks the plank.
+      const hipAngle = angle(S_, H, lms[kn]);
+      const straight = hipAngle > PLANK_HIP_MIN;
+      return {ok:true, holding:straight, hip:hipAngle,
+              warnMsg: straight ? "" : (hipAngle < PLANK_HIP_MIN-25 ? "Hips are sagging!" : "Keep your body straight!"),
+              draw:[[sh,hip],[hip,kn]]};
+    }
+  },
   jacks: {
     label:"Jumping Jacks", warn:"Step back — whole body in frame",
     // OPEN = hands above head AND feet apart.  CLOSED = hands down AND feet together.
@@ -114,8 +142,44 @@ const EXERCISES = {
   }
 };
 
+/* ---------- HOLD exercises (plank): time held, not reps ---------- */
+const HOLD = { secs:0, holding:false, brokeAt:0, failed:false, lastTs:0 };
+function resetHold(){ HOLD.secs=0; HOLD.holding=false; HOLD.brokeAt=0; HOLD.failed=false; HOLD.lastTs=performance.now(); }
+
+function processHold(cfg, lms){
+  const m = cfg.measure(lms);
+  const now = performance.now();
+  const dt = Math.min(0.25, (now - (HOLD.lastTs||now))/1000);
+  HOLD.lastTs = now;
+
+  const good = m.ok && m.holding;
+  if(good){
+    HOLD.secs += dt;                 // clock only runs while the form is good
+    HOLD.holding = true;
+    HOLD.brokeAt = 0;
+    if(S.active || SOLO.on) setStatus("HOLD! " + HOLD.secs.toFixed(1) + "s");
+  } else {
+    HOLD.holding = false;
+    if(!HOLD.brokeAt) HOLD.brokeAt = now;
+    const brokenFor = (now - HOLD.brokeAt)/1000;
+    if(S.active || SOLO.on)
+      setStatus((m.warnMsg||cfg.warn) + "  —  " + Math.max(0,(PLANK_GRACE-brokenFor)).toFixed(1) + "s", true);
+    // a grace window, so a wobble doesn't instantly end it
+    if(brokenFor > PLANK_GRACE && !HOLD.failed){
+      HOLD.failed = true;
+      onHoldFailed();                // wired by multiplayer.js / daily.js
+    }
+  }
+  onHoldTick(HOLD.secs, HOLD.holding);   // wired by multiplayer.js / daily.js
+  return {down:false, draw:m.draw||null};
+}
+/* these get overridden by whichever mode is running */
+let onHoldFailed = ()=>{};
+let onHoldTick   = ()=>{};
+
 function processPose(lms){
   const cfg = EXERCISES[S.exercise] || EXERCISES.squats;
+  if(cfg.hold) return processHold(cfg, lms);
   const m = cfg.measure(lms);
   // live hip-angle readout (push-ups only) so you can tune PUSHUP_HIP_MIN by eye
   if(SHOW_HIP_DEBUG && S.exercise==="pushups"){

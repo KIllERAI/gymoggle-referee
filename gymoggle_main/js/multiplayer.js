@@ -57,6 +57,7 @@ function pushReps(){
 /* ---------- center-screen states ---------- */
 function setStatus(txt,warn=false){ statusEl.textContent=txt; statusEl.classList.toggle("warn",warn); }
 function exLabel(){ return (EXERCISES[S.exercise]||EXERCISES.squats).label; }
+const isHold = () => (EXERCISES[S.exercise]||{}).hold === true;
 
 /* ---------- opponent presence + callouts ---------- */
 const CALLOUTS = {
@@ -257,6 +258,33 @@ function showShareCode(code){
   const c=$("copyBtn");  if(c)  c.addEventListener("click",()=>{ navigator.clipboard?.writeText(code); toast("Code copied"); });
 }
 
+/* ---------- PLANK CHICKEN: no timer. First to break form loses. ---------- */
+function wireHoldMode(){
+  resetHold();
+  onHoldTick = (secs, holding)=>{
+    const s = Math.floor(secs);
+    if(s !== S.myReps){                 // hold seconds ARE the score
+      S.myReps = s;
+      youScoreEl.textContent = s;
+      pushReps();
+      updatePresence();
+    }
+    youScoreEl.classList.toggle("wobble", !holding);
+  };
+  onHoldFailed = ()=>{
+    if(!S.active) return;
+    try{ if(ws && ws.readyState===1) ws.send(JSON.stringify({type:"broke"})); }catch(e){}
+    S.active = false;
+    setStatus("You broke! 💀", true);
+    speak("You broke!", true);
+    beep(160,0.4,"sawtooth",0.3);
+  };
+}
+function unwireHoldMode(){
+  onHoldTick=()=>{}; onHoldFailed=()=>{};
+  if(youScoreEl) youScoreEl.classList.remove("wobble");
+}
+
 /* ---------- match flow ---------- */
 let lastSecond=-1;
 function startMatch(duration){
@@ -264,6 +292,9 @@ function startMatch(duration){
   S.myReps=0; S.oppReps=0; lastSent=-1; lastSecond=-1;
   youScoreEl.textContent="0"; oppScoreEl.textContent="0";
   S.phase="playing"; setStatus("Get ready"); setAgain("idle"); removeLeftNote(); resetPresence(); clearInterval(lobbyTimer); stopTips();
+  S.mode = isHold() ? "hold" : "reps";        // plank = hold, everything else = reps
+  if(S.mode==="hold"){ wireHoldMode(); $("clock").classList.add("hidden"); }
+  else { unwireHoldMode(); $("clock").classList.remove("hidden"); }
   centerEl.innerHTML='<div class="box"><div class="vsflash">VS</div></div>';
   tick();
   setTimeout(runCountdown, 700);

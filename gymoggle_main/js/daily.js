@@ -2,7 +2,7 @@
    Part of the GymOggle app. Loaded as a classic script; modules share globals. */
 
 /* ---------- DAILY TASKS ---------- */
-const EX_ICON = { squats:"🏋️", pushups:"💪", situps:"🔥", jacks:"⭐" };
+const EX_ICON = { squats:"🏋️", pushups:"💪", situps:"🔥", jacks:"⭐", plank:"🧱" };
 let DAILY = null;
 
 async function openDaily(){
@@ -25,9 +25,11 @@ function renderDaily(){
   $("dList").innerHTML = (DAILY.tasks||[]).map(t=>{
     const isDone = done.has(t.idx);
     const label = (EXERCISES[t.exercise]||{label:t.exercise}).label;
+    const isHoldTask = (EXERCISES[t.exercise]||{}).hold === true;
+    const title = isHoldTask ? `${t.target}s ${label}` : `${t.target} ${label}`;
     return `<div class="d-task${isDone?" done":""}" data-idx="${t.idx}">
       <div class="d-ico">${EX_ICON[t.exercise]||"🎯"}</div>
-      <div class="d-txt"><b>${t.target} ${label}</b>
+      <div class="d-txt"><b>${title}</b>
         <small>${isDone?"Completed ✓":"Tap to start"}</small></div>
       <div class="d-coin">${isDone?"✓":"+"+t.coins+" 🪙"}</div>
     </div>`;
@@ -50,6 +52,7 @@ const BOSSES = {
   pushups: ["The Floor Fiend","Baron Bench","The Chest Crusher"],
   situps:  ["The Core Kraken","Ab-solute Zero","The Crunch Lord"],
   jacks:   ["Captain Cardio","The Star Beast","Jack the Ripper"],
+  plank:   ["The Iron Wall","Lord Stillness","The Endurance Beast"],
 };
 const SOLO_CHEERS = {
   quarter: ["Warming up 🔥","It's feeling it!","Keep going!","That's the way!"],
@@ -73,11 +76,14 @@ async function startSolo(task){
   SOLO.on=true; SOLO.task=task; SOLO.reps=0; SOLO.milestones=new Set();
   S.exercise = task.exercise;
   stage="up"; jackFeetMin=null;   // fresh stance baseline each run
+  SOLO.hold = (EXERCISES[task.exercise]||{}).hold === true;
+  if(SOLO.hold) wireSoloHold(task);
+  else { onHoldTick=()=>{}; onHoldFailed=()=>{}; }
   const label=(EXERCISES[task.exercise]||{label:task.exercise}).label;
   const bosses = BOSSES[task.exercise] || ["The Grind"];
   $("soloTitle").textContent = label;
   $("soloBossName").textContent = pick(bosses);
-  $("soloTarget").textContent = task.target;
+  $("soloTarget").textContent = task.target + (SOLO.hold ? "s" : "");
   $("soloNow").textContent = "0";
   $("soloBar").style.width = "0%";
   $("soloHp").style.width = "100%";
@@ -95,6 +101,34 @@ async function startSolo(task){
   if(!looping){ looping=true; loop(); }
   setStatus(label+" — go!");
   speak(label+"! Go!", true);
+}
+/* ---------- solo PLANK: hold the clock, don't break ---------- */
+function wireSoloHold(task){
+  resetHold();
+  onHoldTick = (secs, holding)=>{
+    if(!SOLO.on) return;
+    const shown = Math.min(task.target, secs);
+    SOLO.reps = Math.floor(secs);
+    $("soloNow").textContent = shown.toFixed(1);
+    const pct = Math.min(100, secs/task.target*100);
+    $("soloBar").style.width = pct+"%";
+    const hp = Math.max(0, 100-pct);
+    $("soloHp").style.width = hp+"%";
+    $("soloHp").classList.toggle("low", hp<=35);
+    $("soloHpTxt").textContent = Math.max(0,(task.target-secs)).toFixed(0)+"s left";
+    // milestone hype (same as reps)
+    const f = secs/task.target;
+    const st = f>=0.9 ? "last" : (f>=0.75 ? "three" : (f>=0.5 ? "half" : (f>=0.25 ? "quarter" : null)));
+    if(st && !SOLO.milestones.has(st)){ SOLO.milestones.add(st); flashCallout(pick(SOLO_CHEERS[st]), "ahead"); }
+    if(secs >= task.target){ SOLO.reps = task.target; finishSolo(); }
+  };
+  onHoldFailed = ()=>{
+    if(!SOLO.on) return;
+    setStatus("Plank broken! Try again.", true);
+    speak("Plank broken!", true);
+    beep(160,0.4,"sawtooth",0.3);
+    endSolo(); show("daily");
+  };
 }
 function soloRep(){
   SOLO.reps++;
@@ -141,6 +175,7 @@ async function finishSolo(){
 }
 function endSolo(){
   SOLO.on=false; busy=false;
+  onHoldTick=()=>{}; onHoldFailed=()=>{};
   $("soloHud").style.display="none";
   $("soloQuit").style.display="none";
   $("oppPanel").classList.remove("on");

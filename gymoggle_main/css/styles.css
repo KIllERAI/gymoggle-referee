@@ -423,3 +423,9 @@
   .run-calib .cbar{height:8px;background:rgba(255,255,255,.1);border-radius:5px;overflow:hidden}
   .run-calib .cbar i{display:block;height:100%;width:0;background:var(--you);border-radius:5px}
   .run-calib small{display:block;color:var(--dim);font-size:12px;margin-top:10px}
+
+
+/* ===== PLANK / HOLD MODE ===== */
+.clock.hidden{display:none}
+@keyframes scoreWobble{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.score.wobble{animation:scoreWobble .3s ease infinite;color:var(--opp)!important}
