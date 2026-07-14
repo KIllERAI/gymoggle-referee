@@ -1,10 +1,11 @@
 import sys
+
 from PySide6.QtWidgets import QApplication
-from ui.home import HomeWindow
+from app import GymOggleApp
 
 app = QApplication(sys.argv)
 
-window = HomeWindow()
+window = GymOggleApp()
 window.show()
 
 sys.exit(app.exec())

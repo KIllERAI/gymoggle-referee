@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>GymOggle — Rep Battles</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+
+</head>
+<body>
+
+  <!-- ===== INTRO SPLASH ===== -->
+  <div id="splash">
+    <div class="ring"></div>
+    <div class="flash"></div>
+    <div class="db db-l"><svg viewBox="0 0 150 60" xmlns="http://www.w3.org/2000/svg">
+      <rect x="55" y="25" width="40" height="10" rx="5"/>
+      <rect x="34" y="14" width="14" height="32" rx="4"/><rect x="20" y="7" width="12" height="46" rx="4"/>
+      <rect x="102" y="14" width="14" height="32" rx="4"/><rect x="118" y="7" width="12" height="46" rx="4"/>
+    </svg></div>
+    <div class="db db-r"><svg viewBox="0 0 150 60" xmlns="http://www.w3.org/2000/svg">
+      <rect x="55" y="25" width="40" height="10" rx="5"/>
+      <rect x="34" y="14" width="14" height="32" rx="4"/><rect x="20" y="7" width="12" height="46" rx="4"/>
+      <rect x="102" y="14" width="14" height="32" rx="4"/><rect x="118" y="7" width="12" height="46" rx="4"/>
+    </svg></div>
+    <div class="logo">GymOggle</div>
+  </div>
+
+  <!-- ===== LANDING ===== -->
+  <section id="landing" class="screen on">
+    <div class="sparkles" id="sparkles" aria-hidden="true"></div>
+    <h1 class="mark">GymOggle</h1>
+    <p class="tag">Battle a friend · most reps wins</p>
+    <p id="challengeNote" class="challenge" style="display:none">⚔️ You've been challenged! Enter a tag and tap Join.</p>
+    <div class="field">
+      <input id="name" maxlength="12" placeholder="Enter a tag" autocomplete="off" />
+      <div class="exlabel">Pick your battle</div>
+      <div class="exsel">
+        <button class="ex on" data-ex="squats">Squats</button>
+        <button class="ex" data-ex="pushups">Push-ups</button>
+        <button class="ex" data-ex="situps">Sit-ups</button>
+      </div>
+      <button id="findBtn" class="btn primary">Find opponent</button>
+      <div class="or"><i></i>Or play a friend<i></i></div>
+      <button id="createBtn" class="btn ghost wide">Create game</button>
+      <div class="joinrow">
+        <input id="joinCode" maxlength="4" placeholder="CODE" autocomplete="off" />
+        <button id="joinBtn" class="btn ghost">Join</button>
+      </div>
+      <button id="runBtn" class="btn ghost wide">🦍 Escape the Jungle</button>
+      <button id="dailyBtn" class="btn ghost wide">📅 Daily Tasks</button>
+      <button id="boardBtn" class="btn ghost wide">🏆 Leaderboard</button>
+    </div>
+    <p class="fineprint">Find a random opponent, or create a game and share the code with a friend.
+      Camera stays on your device — only your rep count is sent.</p>
+  </section>
+
+  <!-- ===== LEADERBOARD ===== -->
+  <section id="board" class="screen">
+    <div class="board-head">
+      <button id="boardBack">←</button>
+      <h2>Leaderboard</h2>
+    </div>
+    <div class="board-tabs">
+      <button class="btab on" data-tab="scores">Top Scores</button>
+      <button class="btab" data-tab="wins">Most Wins</button>
+    </div>
+    <div class="ex-filter" id="exFilter">
+      <button class="bex on" data-bex="squats">Squats</button>
+      <button class="bex" data-bex="pushups">Push-ups</button>
+      <button class="bex" data-bex="situps">Sit-ups</button>
+    </div>
+    <div class="board-list" id="boardList"></div>
+  </section>
+
+  <!-- ===== DAILY TASKS ===== -->
+  <section id="daily" class="screen">
+    <div class="d-head">
+      <button id="dailyBack">←</button>
+      <h2>Daily Tasks</h2>
+    </div>
+    <div class="d-stats">
+      <div class="d-stat"><b id="dCoins">0</b><span>🪙 Coins</span></div>
+      <div class="d-stat"><b id="dStreak">0</b><span>🔥 Day Streak</span></div>
+      <div class="d-stat"><b id="dDone">0/3</b><span>✅ Today</span></div>
+    </div>
+    <div class="d-list" id="dList"></div>
+    <p class="d-note">New tasks every day — same for everyone. Clear all 3 for a bonus and keep your streak alive.</p>
+  </section>
+
+  <!-- ===== GAME ===== -->
+  <section id="game" class="screen">
+    <div class="stage" id="stage">
+      <video id="video" playsinline muted></video>
+      <canvas id="overlay"></canvas>
+      <div class="hud">
+        <button id="muteBtn" class="mute">🔊</button>
+        <div id="exBanner" class="exbanner"></div>
+        <div id="dbgHip" class="dbg-hip"></div>
+        <div class="corners">
+          <div class="corner l"><span class="who" id="youName">You</span><span class="score" id="youScore">0</span></div>
+        </div>
+
+        <div class="opp-panel" id="oppPanel">
+          <div class="opp-name">Opponent</div>
+          <svg class="avatar" id="oppAvatar" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+            <g class="fig">
+              <!-- arms + fists -->
+              <rect class="g-body" x="11" y="50" width="15" height="48" rx="7"/>
+              <rect class="g-body" x="74" y="50" width="15" height="48" rx="7"/>
+              <circle class="g-body" cx="18" cy="99" r="8"/>
+              <circle class="g-body" cx="82" cy="99" r="8"/>
+              <!-- legs + feet -->
+              <rect class="g-body" x="35" y="92" width="13" height="24" rx="6"/>
+              <rect class="g-body" x="52" y="92" width="13" height="24" rx="6"/>
+              <ellipse class="g-body" cx="40" cy="116" rx="9" ry="5"/>
+              <ellipse class="g-body" cx="60" cy="116" rx="9" ry="5"/>
+              <!-- torso -->
+              <ellipse class="g-body" cx="50" cy="73" rx="28" ry="26"/>
+              <!-- head: crest, ears, skull -->
+              <ellipse class="g-body" cx="50" cy="13" rx="9" ry="7"/>
+              <circle class="g-body" cx="29" cy="29" r="6"/>
+              <circle class="g-body" cx="71" cy="29" r="6"/>
+              <ellipse class="g-body" cx="50" cy="31" rx="21" ry="20"/>
+              <!-- face -->
+              <ellipse class="g-face" cx="50" cy="34" rx="14" ry="15"/>
+              <circle class="g-eye" cx="43" cy="30" r="3.6"/>
+              <circle class="g-eye" cx="57" cy="30" r="3.6"/>
+              <circle class="g-pupil" cx="43.5" cy="30.5" r="1.8"/>
+              <circle class="g-pupil" cx="57.5" cy="30.5" r="1.8"/>
+              <ellipse class="g-nostril" cx="46" cy="38" rx="1.6" ry="2.2"/>
+              <ellipse class="g-nostril" cx="54" cy="38" rx="1.6" ry="2.2"/>
+              <!-- brows (swap by mood) -->
+              <path class="g-feat brow-neutral" d="M38,24 L47,23 M53,23 L62,24"/>
+              <path class="g-feat brow-happy" d="M38,24 Q42,20 47,22 M53,22 Q58,20 62,24"/>
+              <path class="g-feat brow-strain" d="M38,22 L47,26 M53,26 L62,22"/>
+              <!-- mouths (swap by mood) -->
+              <path class="g-feat m-flat" d="M44,44 L56,44"/>
+              <path class="g-feat m-grin" d="M42,43 Q50,51 58,43"/>
+              <path class="g-feat m-grit" d="M43,44 H57 M46,42 V46 M50,42 V46 M54,42 V46"/>
+            </g>
+          </svg>
+          <div class="score" id="oppScore">0</div>
+        </div>
+
+        <div class="callout" id="callout"></div>
+
+        <div class="clockwrap">
+          <div class="race" id="raceWrap">
+            <div class="race-row you"><b>You</b><div class="track"><div class="fill you" id="youBar"></div></div></div>
+            <div class="race-row opp"><b>Opp</b><div class="track"><div class="fill opp" id="oppBar"></div></div></div>
+          </div>
+          <div class="clock mono" id="clock">1:00</div>
+          <div class="status" id="status">Connecting…</div>
+        </div>
+      </div>
+      <div class="center" id="center"></div>
+      <div class="solo-hud" id="soloHud" style="display:none">
+        <div class="solo-title" id="soloTitle">Squats</div>
+        <div class="solo-hp">
+          <div class="hp-row"><span id="soloBossName">The Grind</span><b id="soloHpTxt">15 / 15</b></div>
+          <div class="hp-track"><div class="hp-fill" id="soloHp"></div></div>
+        </div>
+        <div class="solo-count"><span id="soloNow">0</span><b> / <span id="soloTarget">15</span></b></div>
+        <div class="solo-bar"><i id="soloBar"></i></div>
+        <div class="solo-reward">🪙 <span id="soloCoins">+10</span> coins on completion</div>
+      </div>
+      <button id="soloQuit" style="display:none">← Quit</button>
+
+      <!-- 🦍 ESCAPE THE JUNGLE -->
+      <canvas id="runCanvas"></canvas>
+      <button id="runQuit">← Quit</button>
+      <div class="run-hud">
+        <div class="run-top">
+          <div class="run-stat"><span class="d" id="runDist">0</span><span class="u">m</span></div>
+          <div class="run-stat run-coins">🪙 <span id="runCoins">0</span></div>
+        </div>
+        <div class="run-danger">
+          <div class="rd-row"><span>🦍 Gorilla</span><span id="runHits">3 lives</span></div>
+          <div class="rd-track"><div class="rd-fill" id="runRage"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== RESULTS ===== -->
+  <section id="results" class="screen">
+    <div class="rsplit">
+      <div class="rside l" id="rYou"><div class="crown" id="crownYou"></div><span class="rwho" id="rYouName">You</span><span class="rscore" id="rYouScore">0</span></div>
+      <div class="rside r" id="rOpp"><div class="crown" id="crownOpp"></div><span class="rwho">Opponent</span><span class="rscore" id="rOppScore">0</span></div>
+    </div>
+    <div class="verdict"><div class="big" id="verdict">—</div></div>
+    <div class="resbtns">
+      <button class="again" id="againBtn">Play again</button>
+      <button class="exit" id="exitBtn">Exit</button>
+    </div>
+    <div class="rchat" id="rChatBox">
+      <div class="rchat-log" id="rChat"></div>
+      <div class="rchat-inrow">
+        <input id="rChatInput" maxlength="200" placeholder="Say something…" autocomplete="off" />
+        <button id="rChatSend">Send</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="toast" id="toast"></div>
+
+<script src="js/core.js"></script>
+  <script src="js/detection.js"></script>
+  <script src="js/multiplayer.js"></script>
+  <script src="js/leaderboard.js"></script>
+  <script src="js/daily.js"></script>
+  <!-- js/games/runner.js is PARKED — not loaded -->
+</body>
+</html>
