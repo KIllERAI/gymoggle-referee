@@ -27,6 +27,18 @@ function connect(){
     else if(t==="ready_state"){ if(d.who!==S.me) lobbyOppReady(); }
     else if(t==="cancelled"){ /* handled locally on cancel tap */ }
     else if(t==="opponent_here"){ /* start follows */ }
+    else if(t==="plank_go"){
+      plankPhase="count";
+      let n=d.count||5;
+      setStatus("Both in! Hold… "+n); speak("Hold!", true);
+      const iv=setInterval(()=>{ n--; if(n>0){ setStatus("Hold… "+n); beep(520,.06); }
+        else { clearInterval(iv); } }, 1000);
+    }
+    else if(t==="plank_live"){
+      plankPhase="live"; resetHold();       // clock starts NOW
+      S.active=true;
+      setStatus("GO! Hold it!", false); speak("Go!", true); beep(880,.15);
+    }
     else if(t==="start"){ if(d.exercise) S.exercise=d.exercise; show("game"); startMatch(d.duration); }
     else if(t==="scores"){ const sc=d.scores; if(S.me && other(S.me) in sc){
         const newOpp=sc[other(S.me)];
@@ -122,7 +134,7 @@ function resetPresence(){
   const yb=$("youBar"), ob=$("oppBar"); if(yb) yb.style.width="0%"; if(ob) ob.style.width="0%";
   $("callout").classList.remove("show");
   $("oppAvatar").setAttribute("class","avatar ex-"+S.exercise);   // SVG className is read-only; use setAttribute
-  const dh=$("dbgHip"); if(dh) dh.style.display = (SHOW_HIP_DEBUG && S.exercise==="pushups") ? "block" : "none";
+  const dh=$("dbgHip"); if(dh) dh.style.display = (SHOW_HIP_DEBUG && (S.exercise==="pushups"||S.exercise==="plank")) ? "block" : "none";
 }
 function showPresence(on){
   $("oppPanel").classList.toggle("on",on);
@@ -259,24 +271,39 @@ function showShareCode(code){
 }
 
 /* ---------- PLANK CHICKEN: no timer. First to break form loses. ---------- */
+let plankPhase="wait";   // "wait" (get into position) -> "count" -> "live"
 function wireHoldMode(){
   resetHold();
+  plankPhase="wait";
+  let sentReady=false;
   onHoldTick = (secs, holding)=>{
-    const s = Math.floor(secs);
-    if(s !== S.myReps){                 // hold seconds ARE the score
-      S.myReps = s;
-      youScoreEl.textContent = s;
-      pushReps();
-      updatePresence();
+    if(plankPhase==="wait"){
+      // phase 1: tell the player to get into position; report when they're holding
+      if(holding && !sentReady){
+        sentReady=true;
+        try{ if(ws&&ws.readyState===1) ws.send(JSON.stringify({type:"plank_ready"})); }catch(e){}
+        setStatus("You're in! Waiting for opponent…");
+      } else if(!holding){
+        sentReady=false;
+        setStatus("Get into a plank position…");
+      }
+      youScoreEl.textContent="0";
+      return;
     }
+    if(plankPhase==="count"){
+      youScoreEl.classList.toggle("wobble", !holding);
+      return;                            // countdown handled by plank_go handler
+    }
+    // phase 3: LIVE — seconds held = score
+    const s=Math.floor(HOLD.secs);
+    if(s!==S.myReps){ S.myReps=s; youScoreEl.textContent=s; pushReps(); updatePresence(); }
     youScoreEl.classList.toggle("wobble", !holding);
   };
   onHoldFailed = ()=>{
-    if(!S.active) return;
-    try{ if(ws && ws.readyState===1) ws.send(JSON.stringify({type:"broke"})); }catch(e){}
-    S.active = false;
-    setStatus("You broke! 💀", true);
-    speak("You broke!", true);
+    if(plankPhase!=="live" || !S.active) return;   // drops before "live" don't count
+    try{ if(ws&&ws.readyState===1) ws.send(JSON.stringify({type:"broke"})); }catch(e){}
+    S.active=false;
+    setStatus("You dropped! 💀", true); speak("You dropped!", true);
     beep(160,0.4,"sawtooth",0.3);
   };
 }
@@ -293,11 +320,16 @@ function startMatch(duration){
   youScoreEl.textContent="0"; oppScoreEl.textContent="0";
   S.phase="playing"; setStatus("Get ready"); setAgain("idle"); removeLeftNote(); resetPresence(); clearInterval(lobbyTimer); stopTips();
   S.mode = isHold() ? "hold" : "reps";        // plank = hold, everything else = reps
-  if(S.mode==="hold"){ wireHoldMode(); $("clock").classList.add("hidden"); }
-  else { unwireHoldMode(); $("clock").classList.remove("hidden"); }
   centerEl.innerHTML='<div class="box"><div class="vsflash">VS</div></div>';
-  tick();
-  setTimeout(runCountdown, 700);
+  if(S.mode==="hold"){
+    wireHoldMode(); $("clock").classList.add("hidden");
+    S.active=true;                       // detection runs; but drops only count once "live"
+    setStatus("Get into a plank position…");
+  } else {
+    unwireHoldMode(); $("clock").classList.remove("hidden");
+    tick();
+    setTimeout(runCountdown, 700);
+  }
 }
 function runCountdown(){
   const seq=[["3",440],["2",440],["1",440],["GO",800]];

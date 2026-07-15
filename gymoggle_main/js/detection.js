@@ -22,7 +22,12 @@ const vis = lm => (lm.visibility==null ? 1 : lm.visibility);
 let PUSHUP_HIP_MIN = 155;   // <<< CHANGE THIS NUMBER to tune the knee-push-up gate
 let PUSHUP_UP_ELBOW = 150;  // <<< arms straighter than this = "up" (top of push-up)
 let PUSHUP_DOWN_ELBOW = 100;
-let PLANK_HIP_MIN = 150;    // <<< hip must stay straighter than this. Sag/pike = broken plank.
+let PUSHUP_FRONT_UP   = 1.05;  // <<< FRONT view: shoulders this far above hands (in shoulder-widths) = UP
+let PUSHUP_FRONT_DOWN = 0.60;  // <<< FRONT view: this close to the hands = DOWN (chest lowered)
+let PLANK_HIP_MIN = 150;
+let plankBaseY = null;   // learned resting chest height for the current hold
+let PLANK_LEVEL_MAX = 0.60;   // <<< body counts as "in a plank" when shoulder~hip height gap < this
+let PLANK_DROP_MAX  = 0.35;   // <<< chest sinks more than this (shoulder-widths) below its high point = COLLAPSED    // <<< hip must stay straighter than this. Sag/pike = broken plank.
 const PLANK_GRACE = 1.2;    // <<< seconds of broken form before the plank counts as FAILED// <<< arms bent tighter than this = "down" (bottom of push-up)
 const SHOW_HIP_DEBUG = true; // <<< shows the live hip angle on screen during push-ups; set false when done tuning
 
@@ -44,13 +49,50 @@ const EXERCISES = {
     }
   },
   pushups: {
-    label:"Push-ups", warn:"Side-on — hands to feet in frame",
-    // A real push-up = the whole body drops toward the floor and rises back up.
-    // We measure how high the shoulder sits ABOVE the planted hands (wrist),
-    // scaled by torso length so it's the same near/far from camera.
-    // Lying flat and bending your arms keeps the shoulder on the floor -> no rise -> no rep.
+    label:"Push-ups", warn:"Hands on the floor — whole body in frame",
+    // Works from EITHER angle. We auto-detect which one you're using.
+    //
+    //  FRONT VIEW (camera in front of you, like PushSlayer):
+    //     As you lower, your shoulders drop toward your hands AND move closer to
+    //     the camera. So the shoulder->hand gap shrinks while shoulder width grows.
+    //     Measuring that gap IN SHOULDER-WIDTHS gives a scale-free "depth" signal
+    //     that needs no side view. (This is the trapezoid trick.)
+    //
+    //  SIDE VIEW (camera side-on):
+    //     Elbow angle for up/down + the HIP-ANGLE anti-cheat that blocks knee
+    //     push-ups. Only the side view can see a piked hip, so only it can catch
+    //     that cheat.
     measure(lms){
-      const sides=[[11,23,25,13,15],[12,24,26,14,16]]; // shoulder,hip,knee,elbow,wrist
+      const LS=lms[11], RS=lms[12], LW=lms[15], RW=lms[16], LH=lms[23], RH=lms[24];
+      if(Math.min(vis(LS),vis(RS),vis(LW),vis(RW)) < 0.5)
+        return {ok:false, warnMsg:"Step back — shoulders and hands must be visible"};
+
+      const shMidX=(LS.x+RS.x)/2, shMidY=(LS.y+RS.y)/2;
+      const hipMidX=(LH.x+RH.x)/2, hipMidY=(LH.y+RH.y)/2;
+      const shW = Math.hypot(LS.x-RS.x, LS.y-RS.y) || 0.001;
+
+      // Which way is the camera? Side-on = the body runs ACROSS the image.
+      const bodyDx=Math.abs(hipMidX-shMidX), bodyDy=Math.abs(hipMidY-shMidY);
+      const sideView = bodyDx > bodyDy;
+
+      /* ---------------- FRONT VIEW ---------------- */
+      if(!sideView){
+        const wrMidY=(LW.y+RW.y)/2;
+        // shoulders sit ABOVE the hands; measure that gap in shoulder-widths.
+        // top of the rep -> big.   bottom -> small.
+        const depth = (wrMidY - shMidY) / shW;
+        window.__pushDepth = depth;
+        // must actually be in a push-up shape: hands below the shoulders
+        if(wrMidY < shMidY)
+          return {ok:false, warnMsg:"Get into a push-up — hands on the floor"};
+        return {ok:true, depth, front:true,
+                up:   depth > PUSHUP_FRONT_UP,
+                down: depth < PUSHUP_FRONT_DOWN,
+                draw:[[11,12],[12,16],[16,15],[15,11],[11,13],[13,15],[12,14],[14,16]]};
+      }
+
+      /* ---------------- SIDE VIEW (keeps the knee-cheat gate) ---------------- */
+      const sides=[[11,23,25,13,15],[12,24,26,14,16]];
       let best=null,bv=-1;
       for(const a of sides){
         const v=Math.min(vis(lms[a[0]]),vis(lms[a[1]]),vis(lms[a[3]]),vis(lms[a[4]]));
@@ -58,20 +100,12 @@ const EXERCISES = {
       }
       if(bv<0.5) return {ok:false};
       const [sh,hip,kn,el,wr]=best;
-      const S_=lms[sh], H=lms[hip];
-      // GATE 1 — ORIENTATION: body must be roughly HORIZONTAL (a plank). Standing is vertical -> blocked.
-      if(Math.abs(H.x - S_.x) < Math.abs(H.y - S_.y)) return {ok:false, warnMsg:"Get horizontal — this is a plank position"};
-
-      // GATE 2 — HIP ANGLE ANTI-CHEAT (shoulder-hip-knee): straight(~180)=real, piked=knee push-up -> blocked.
-      const hipAngle = angle(S_, H, lms[kn]);
+      const hipAngle = angle(lms[sh], lms[hip], lms[kn]);
       window.__hipAngle = hipAngle;
-      if(hipAngle < PUSHUP_HIP_MIN) return {ok:false, hip:hipAngle, warnMsg:"Straighten your body — no knee push-ups!"};
-
-      // UP/DOWN — ELBOW ANGLE (shoulder-elbow-wrist): extended=up, bent=down. Reliable now that the
-      // two gates above block standing/knee cheats.
+      if(hipAngle < PUSHUP_HIP_MIN)
+        return {ok:false, hip:hipAngle, warnMsg:"Straighten your body — no knee push-ups!"};
       const elbow = angle(lms[sh], lms[el], lms[wr]);
-      window.__elbowAngle = elbow;
-      return {ok:true, hip:hipAngle, elbow:elbow,
+      return {ok:true, hip:hipAngle, elbow, front:false,
               up: elbow > PUSHUP_UP_ELBOW, down: elbow < PUSHUP_DOWN_ELBOW,
               draw:[[sh,el],[el,wr],[sh,hip],[hip,kn]]};
     }
@@ -96,29 +130,44 @@ const EXERCISES = {
     }
   },
   plank: {
-    label:"Plank", warn:"Get into a plank — side-on to the camera",
-    hold:true,                     // <-- this exercise is a HOLD, not reps
-    // Reuses the two push-up gates: body must be HORIZONTAL and the hip must stay
-    // STRAIGHT. Sagging or piking the hips = broken form. Same anti-cheat, no timer.
+    label:"Plank", warn:"Get into a plank position",
+    hold:true,
+    // The real question for a plank hold is simple: has your CHEST/TORSO dropped to
+    // the floor (collapsed), or are you still up holding it? We track the torso's
+    // resting height when you first get into position, and you "break" when it sinks.
+    // Works front OR side (auto): from the front we also require the body to be
+    // level (shoulders ~ hips) so standing doesn't count as a plank.
     measure(lms){
-      const sides=[[11,23,25],[12,24,26]];   // shoulder, hip, knee
-      let best=null, bv=-1;
-      for(const a of sides){
-        const v=Math.min(vis(lms[a[0]]),vis(lms[a[1]]),vis(lms[a[2]]));
-        if(v>bv){bv=v;best=a;}
+      const LS=lms[11], RS=lms[12], LH=lms[23], RH=lms[24], LK=lms[25], RK=lms[26];
+      if(Math.min(vis(LS),vis(RS),vis(LH),vis(RH)) < 0.5)
+        return {ok:false, holding:false, warnMsg:"Step back — whole body in frame"};
+
+      const shMidX=(LS.x+RS.x)/2, shMidY=(LS.y+RS.y)/2;
+      const hipMidX=(LH.x+RH.x)/2, hipMidY=(LH.y+RH.y)/2;
+      const shW=Math.hypot(LS.x-RS.x, LS.y-RS.y)||0.001;
+      const torsoMidY=(shMidY+hipMidY)/2;                 // chest/belly height
+      const bodyDx=Math.abs(hipMidX-shMidX), bodyDy=Math.abs(hipMidY-shMidY);
+      const sideView = bodyDx > bodyDy;
+
+      // "in position" = body roughly LEVEL (a plank is horizontal-ish).
+      // measured in shoulder-widths so it's scale/ distance-proof.
+      const level = Math.abs(hipMidY-shMidY)/shW;
+      const inPlank = sideView ? true : (level < PLANK_LEVEL_MAX);
+
+      // torso baseline: the HIGHEST (smallest y) torso we've seen while holding.
+      // if the chest sinks well below that baseline -> collapsed -> broken.
+      if(inPlank){
+        if(plankBaseY===null || torsoMidY < plankBaseY) plankBaseY = torsoMidY;
       }
-      if(bv<0.5) return {ok:false, warnMsg:"Step back — whole body side-on to the camera"};
-      const [sh,hip,kn]=best;
-      const S_=lms[sh], H=lms[hip];
-      // GATE 1 — horizontal (a plank is a horizontal body). Standing = blocked.
-      if(Math.abs(H.x - S_.x) < Math.abs(H.y - S_.y))
-        return {ok:true, holding:false, warnMsg:"Get horizontal — plank position"};
-      // GATE 2 — straight hip. Sag or pike breaks the plank.
-      const hipAngle = angle(S_, H, lms[kn]);
-      const straight = hipAngle > PLANK_HIP_MIN;
-      return {ok:true, holding:straight, hip:hipAngle,
-              warnMsg: straight ? "" : (hipAngle < PLANK_HIP_MIN-25 ? "Hips are sagging!" : "Keep your body straight!"),
-              draw:[[sh,hip],[hip,kn]]};
+      const sank = plankBaseY!==null ? (torsoMidY - plankBaseY)/shW : 0;  // how far chest dropped
+      window.__plankSank = sank; window.__plankLevel = level;
+
+      const collapsed = sank > PLANK_DROP_MAX;             // chest hit the deck
+      const holding = inPlank && !collapsed;
+      return {ok:true, holding, front:!sideView, sank, level,
+              warnMsg: !inPlank ? "Get down into a plank"
+                     : collapsed ? "You dropped!" : "",
+              draw: sideView ? [[11,23],[23,25]] : [[11,12],[23,24],[11,23],[12,24]]};
     }
   },
   jacks: {
@@ -144,7 +193,7 @@ const EXERCISES = {
 
 /* ---------- HOLD exercises (plank): time held, not reps ---------- */
 const HOLD = { secs:0, holding:false, brokeAt:0, failed:false, lastTs:0 };
-function resetHold(){ HOLD.secs=0; HOLD.holding=false; HOLD.brokeAt=0; HOLD.failed=false; HOLD.lastTs=performance.now(); }
+function resetHold(){ HOLD.secs=0; HOLD.holding=false; HOLD.brokeAt=0; HOLD.failed=false; HOLD.lastTs=performance.now(); plankBaseY=null; }
 
 function processHold(cfg, lms){
   const m = cfg.measure(lms);
@@ -182,10 +231,23 @@ function processPose(lms){
   if(cfg.hold) return processHold(cfg, lms);
   const m = cfg.measure(lms);
   // live hip-angle readout (push-ups only) so you can tune PUSHUP_HIP_MIN by eye
+  if(SHOW_HIP_DEBUG && S.exercise==="plank"){
+    const d=$("dbgHip");
+    if(d && d.style) d.style.display="block";
+    if(d){ if(m.front){ d.textContent="FRONT · level "+(m.level!=null?m.level.toFixed(2):"—")+"  (flat < "+PLANK_FRONT_LEVEL+")"+(m.holding?"  HOLDING":""); }
+           else { d.textContent="SIDE · hip "+(m.hip!=null?Math.round(m.hip):"—")+"°  (>"+PLANK_HIP_MIN+")"+(m.holding?"  HOLDING":""); } }
+  }
   if(SHOW_HIP_DEBUG && S.exercise==="pushups"){
     const d=$("dbgHip");
-    if(d){ const h=(m.hip!=null?Math.round(m.hip):"—"), e=(m.elbow!=null?Math.round(m.elbow):"—");
-      d.textContent = "hip "+h+"°  ·  elbow "+e+"°   (hip>"+PUSHUP_HIP_MIN+"  up>"+PUSHUP_UP_ELBOW+"  down<"+PUSHUP_DOWN_ELBOW+")"; }
+    if(d){
+      if(m.front){
+        d.textContent = "FRONT · depth "+(m.depth!=null?m.depth.toFixed(2):"—")
+                      + "   (up>"+PUSHUP_FRONT_UP+"  down<"+PUSHUP_FRONT_DOWN+")";
+      } else {
+        const h=(m.hip!=null?Math.round(m.hip):"—"), e=(m.elbow!=null?Math.round(m.elbow):"—");
+        d.textContent = "SIDE · hip "+h+"°  elbow "+e+"°   (hip>"+PUSHUP_HIP_MIN+"  up>"+PUSHUP_UP_ELBOW+"  down<"+PUSHUP_DOWN_ELBOW+")";
+      }
+    }
   }
   if(!m.ok){ if(S.active) setStatus(m.warnMsg||cfg.warn,true); return {down:false, draw:null}; }
   if(m.down){ stage="down"; }
