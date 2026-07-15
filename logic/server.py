@@ -3091,6 +3091,95 @@ async def leave_room(ws):
         print(f"[{c}] closed")
 
 
+
+
+# =====================================================================
+#  N-PLAYER FREE-FOR-ALL (2-8)  — a SEPARATE system from 1v1 `rooms`.
+#  Nothing here touches the validated 2-player match code above.
+# =====================================================================
+mrooms = {}   # code -> {host, size, exercise, started, players:{ws:{...}}, task}
+COLORS = ["#22e0d6","#ff2e7e","#ffd23f","#7cf16a","#a78bfa","#ff9f43","#4dd0e1","#f06292"]
+
+def mroom_of(ws):
+    for code, r in mrooms.items():
+        if ws in r["players"]:
+            return code, r
+    return None, None
+
+def mroster(r):
+    return [{"pid":p["pid"],"name":p["name"],"color":p["color"],
+             "reps":p["reps"],"out":p["out"],"ready":p["ready"]}
+            for p in r["players"].values()]
+
+async def mbroadcast(r, payload):
+    await asyncio.gather(*[send(ws,payload) for ws in list(r["players"].keys())],
+                         return_exceptions=True)
+
+async def msend_roster(r):
+    await mbroadcast(r, {"type":"m_roster","players":mroster(r),
+                         "size":r["size"],"host":r["host_pid"],"exercise":r["exercise"]})
+
+async def mstart(code):
+    r = mrooms.get(code)
+    if not r or r["started"]: return
+    r["started"] = True
+    is_plank = (r["exercise"] == "plank")
+    for p in r["players"].values():
+        p["reps"]=0; p["out"]=False; p["ready"]=False
+    await mbroadcast(r, {"type":"m_start","exercise":r["exercise"],
+                         "mode":("hold" if is_plank else "reps"),
+                         "duration":(PLANK_MAX if is_plank else DURATION)})
+    r["task"] = asyncio.create_task(mrun(code, is_plank))
+
+async def mrun(code, is_plank):
+    r = mrooms.get(code)
+    if not r: return
+    if is_plank:
+        # last one still holding wins
+        await mbroadcast(r, {"type":"m_go"})
+        waited=0.0
+        while waited < PLANK_MAX:
+            await asyncio.sleep(0.2); waited+=0.2
+            r = mrooms.get(code)
+            if not r: return
+            alive=[p for p in r["players"].values() if not p["out"]]
+            if len(alive) <= 1: break
+    else:
+        await mbroadcast(r, {"type":"m_go"})
+        await asyncio.sleep(DURATION)
+    r = mrooms.get(code)
+    if not r: return
+    # decide winner
+    if is_plank:
+        alive=[p for p in r["players"].values() if not p["out"]]
+        winner = alive[0]["pid"] if len(alive)==1 else (alive[0]["pid"] if alive else None)
+    else:
+        best=max(r["players"].values(), key=lambda p:p["reps"], default=None)
+        winner = best["pid"] if best else None
+    r["started"]=False
+    standings=sorted(mroster(r), key=lambda p:(p["out"], -p["reps"]))
+    await mbroadcast(r, {"type":"m_over","winner":winner,"standings":standings})
+
+async def mleave(ws):
+    code, r = mroom_of(ws)
+    if not r: return
+    pid = r["players"][ws]["pid"]
+    del r["players"][ws]
+    if not r["players"]:
+        t=r.get("task");  t.cancel() if t else None
+        mrooms.pop(code, None)
+        return
+    # host migrates if needed
+    if r["host_pid"]==pid:
+        r["host_pid"]=next(iter(r["players"].values()))["pid"]
+    if r["started"]:
+        # if a live match empties to 1, end it
+        alive=[p for p in r["players"].values() if not p["out"]]
+        if r["exercise"]=="plank" and len(alive)<=1:
+            pass  # mrun loop will finish it
+    await msend_roster(r)
+
+
 @app.websocket("/")
 async def referee(ws: WebSocket):
     await ws.accept()
@@ -3232,6 +3321,79 @@ async def referee(ws: WebSocket):
             elif t == "leave":
                 await leave_room(ws)
 
+            # ======== N-PLAYER FREE-FOR-ALL (all "m_" types) ========
+            elif t == "m_create":
+                if mroom_of(ws)[1] or room_of(ws)[1]:
+                    continue
+                remember(ws, data)
+                i = ident.get(ws, {})
+                size = max(2, min(8, int(data.get("size", 4))))
+                code = new_code()
+                mrooms[code] = {
+                    "host_pid": i.get("pid", "anon"), "size": size,
+                    "exercise": data.get("exercise", "squats"),
+                    "started": False, "task": None,
+                    "players": {ws: {"pid": i.get("pid","anon"), "name": i.get("name","Player"),
+                                     "color": COLORS[0], "reps": 0, "out": False, "ready": False}},
+                }
+                await send(ws, {"type": "m_created", "code": code, "size": size})
+                await msend_roster(mrooms[code])
+
+            elif t == "m_join":
+                code = (data.get("code") or "").upper().strip()
+                r = mrooms.get(code)
+                if not r:
+                    await send(ws, {"type": "m_error", "msg": "Room not found"}); continue
+                if r["started"]:
+                    await send(ws, {"type": "m_error", "msg": "Match already started"}); continue
+                if len(r["players"]) >= r["size"]:
+                    await send(ws, {"type": "m_error", "msg": "Room is full"}); continue
+                remember(ws, data)
+                i = ident.get(ws, {})
+                used = {p["color"] for p in r["players"].values()}
+                color = next((c for c in COLORS if c not in used), COLORS[len(r["players"]) % len(COLORS)])
+                r["players"][ws] = {"pid": i.get("pid","anon"), "name": i.get("name","Player"),
+                                    "color": color, "reps": 0, "out": False, "ready": False}
+                await send(ws, {"type": "m_joined", "code": code})
+                await msend_roster(r)
+
+            elif t == "m_begin":                 # host starts the match
+                code, r = mroom_of(ws)
+                if r and r["host_pid"] == ident.get(ws, {}).get("pid") and len(r["players"]) >= 2:
+                    await mstart(code)
+
+            elif t == "m_rep":                   # a rep happened (reps modes)
+                code, r = mroom_of(ws)
+                if r and r["started"]:
+                    r["players"][ws]["reps"] = int(data.get("reps", 0))
+                    await mbroadcast(r, {"type": "m_score",
+                                         "pid": r["players"][ws]["pid"],
+                                         "reps": r["players"][ws]["reps"]})
+
+            elif t == "m_out":                   # this player dropped (plank)
+                code, r = mroom_of(ws)
+                if r and r["started"] and not r["players"][ws]["out"]:
+                    r["players"][ws]["out"] = True
+                    await mbroadcast(r, {"type": "m_dropped", "pid": r["players"][ws]["pid"]})
+
+            elif t == "m_ready":                 # in-position for plank
+                code, r = mroom_of(ws)
+                if r:
+                    r["players"][ws]["ready"] = True
+                    await mbroadcast(r, {"type": "m_ready", "pid": r["players"][ws]["pid"]})
+
+            elif t == "m_chat":
+                code, r = mroom_of(ws)
+                if r:
+                    txt = str(data.get("text",""))[:200].strip()
+                    if txt:
+                        p = r["players"][ws]
+                        await mbroadcast(r, {"type":"m_chat","from":p["name"],
+                                             "pid":p["pid"],"color":p["color"],"text":txt})
+
+            elif t == "m_leave":
+                await mleave(ws)
+
     except WebSocketDisconnect:
         pass
     except Exception as e:
@@ -3239,6 +3401,7 @@ async def referee(ws: WebSocket):
 
     finally:
         await leave_room(ws)
+        await mleave(ws)
 
 
 @app.get("/")

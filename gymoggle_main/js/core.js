@@ -10,7 +10,7 @@ const SERVER_URL = params.get("server") || DEFAULT_SERVER;
 const JOIN_CODE = (params.get("join") || "").toUpperCase().slice(0,4);
 
 const $ = id => document.getElementById(id);
-const screens = { landing:$("landing"), game:$("game"), results:$("results"), board:$("board"), daily:$("daily") };
+const screens = { landing:$("landing"), game:$("game"), results:$("results"), board:$("board"), daily:$("daily"), ffa:$("ffa") };
 function show(name){ for(const k in screens) screens[k].classList.toggle("on", k===name); }
 
 const video=$("video"), overlay=$("overlay"), octx=overlay.getContext("2d");
@@ -173,6 +173,7 @@ async function initCamera(){
   const stream = await navigator.mediaDevices.getUserMedia({
     video:{ facingMode:"user", width:{ideal:960}, height:{ideal:720} }, audio:false });
   video.srcObject = stream;
+  window.camStream = stream;          // a MediaStream can feed multiple <video>s (FFA grid)
   await video.play();
   overlay.width=video.videoWidth; overlay.height=video.videoHeight;
   camStarted=true;

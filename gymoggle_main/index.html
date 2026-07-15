@@ -52,12 +52,29 @@
         <input id="joinCode" maxlength="4" placeholder="CODE" autocomplete="off" />
         <button id="joinBtn" class="btn ghost">Join</button>
       </div>
+      <button id="ffaBtn" class="btn ghost wide">👥 Group Battle (2-8)</button>
       <button id="runBtn" class="btn ghost wide">🦍 Escape the Jungle</button>
       <button id="dailyBtn" class="btn ghost wide">📅 Daily Tasks</button>
       <button id="boardBtn" class="btn ghost wide">🏆 Leaderboard</button>
     </div>
     <p class="fineprint">Find a random opponent, or create a game and share the code with a friend.
       Camera stays on your device — only your rep count is sent.</p>
+  </section>
+
+  <!-- ===== 👥 GROUP BATTLE (FREE-FOR-ALL 2-8) ===== -->
+  <section id="ffa" class="screen">
+    <div class="ffa-bar" id="ffaBar" style="display:none">
+      <div><div class="ffa-t" id="ffaTitle">Group Battle</div>
+           <div class="ffa-s" id="ffaSub"></div></div>
+      <div class="ffa-clock" id="ffaClock"></div>
+      <div class="ffa-code">CODE <b id="ffaShare"></b></div>
+    </div>
+    <div class="ffa-grid n4" id="ffaGrid"></div>
+    <div class="ffa-status" id="ffaStatus"></div>
+    <div class="ffa-ctrl" id="ffaCtrl"></div>
+    <div class="ffa-results" id="ffaResults" style="display:none"></div>
+    <div class="ffa-chatbox" id="ffaChat"></div>
+    <button class="btn ghost" id="ffaLeave">← Leave</button>
   </section>
 
   <!-- ===== LEADERBOARD ===== -->
@@ -215,6 +232,8 @@
   <script src="js/multiplayer.js"></script>
   <script src="js/leaderboard.js"></script>
   <script src="js/daily.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+  <script src="js/multiplayer_ffa.js"></script>
   <!-- js/games/runner.js is PARKED — not loaded -->
 </body>
 </html>

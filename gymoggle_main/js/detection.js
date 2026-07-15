@@ -224,6 +224,7 @@ function processHold(cfg, lms){
 }
 /* these get overridden by whichever mode is running */
 let onHoldFailed = ()=>{};
+let onRep = null;   // N-player FFA sets this to claim reps; null = normal solo/1v1
 let onHoldTick   = ()=>{};
 
 function processPose(lms){
@@ -253,7 +254,8 @@ function processPose(lms){
   if(m.down){ stage="down"; }
   if(m.up && stage==="down"){
     stage="up"; flash=8;
-    if(SOLO.on){ soloRep(); }
+    if(typeof onRep==="function"){ onRep(); }   // N-player free-for-all claims reps first
+    else if(SOLO.on){ soloRep(); }
     else if(S.active){
       S.myReps++; youScoreEl.textContent=S.myReps; pushReps();
       repPop(); oppRun=0; myLastRepTs=performance.now(); updatePresence();

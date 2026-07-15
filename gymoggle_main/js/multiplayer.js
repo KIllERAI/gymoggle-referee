@@ -35,8 +35,11 @@ function connect(){
         else { clearInterval(iv); } }, 1000);
     }
     else if(t==="plank_live"){
-      plankPhase="live"; resetHold();       // clock starts NOW
+      plankPhase="live"; resetHold();
+      plankStart=performance.now();          // shared timer starts NOW
       S.active=true;
+      $("clock").classList.remove("hidden");
+      showPresence(false);                   // no You/Opp score panel in plank
       setStatus("GO! Hold it!", false); speak("Go!", true); beep(880,.15);
     }
     else if(t==="start"){ if(d.exercise) S.exercise=d.exercise; show("game"); startMatch(d.duration); }
@@ -100,14 +103,23 @@ function setOppMood(m){
   a.classList.remove("mood-win","mood-lose","mood-neutral");
   a.classList.add("mood-"+m);
 }
+let calloutN=0, lastSpokeAt=0;
 function flashCallout(text,tone){
   const c=$("callout"); if(!c) return;
-  c.textContent=text;
+  c.textContent=text;                       // the TEXT still flashes every time
   c.style.color = tone==="ahead"?"var(--you)":(tone==="behind"?"var(--opp)":(tone==="idle"?"var(--bone)":"var(--gold)"));
   c.classList.remove("show"); void c.offsetWidth; c.classList.add("show");
-  speak(text, true);   // read the trash-talk aloud
+  // but the VOICE only fires occasionally, so it isn't chattering every rep.
+  // speak roughly every 3rd callout, and never more than once every 3.5s.
+  calloutN++;
+  const now=performance.now();
+  const milestone = (tone==="behind" || tone==="idle");   // "last one" / "you there?" always speak
+  if((calloutN%3===0 || milestone) && now-lastSpokeAt>3500){
+    lastSpokeAt=now; speak(text, true);
+  }
 }
 function updatePresence(){
+  if(S.mode==="hold") return;   // plank has no score race -> no ahead/behind callouts
   const you=S.myReps, opp=S.oppReps, max=Math.max(you,opp,1);
   const yb=$("youBar"), ob=$("oppBar");
   if(yb) yb.style.width=(you/max*100)+"%";
@@ -271,14 +283,14 @@ function showShareCode(code){
 }
 
 /* ---------- PLANK CHICKEN: no timer. First to break form loses. ---------- */
-let plankPhase="wait";   // "wait" (get into position) -> "count" -> "live"
+let plankPhase="wait";   // "wait" -> "count" -> "live"
+let plankStart=0;
 function wireHoldMode(){
   resetHold();
   plankPhase="wait";
   let sentReady=false;
   onHoldTick = (secs, holding)=>{
     if(plankPhase==="wait"){
-      // phase 1: tell the player to get into position; report when they're holding
       if(holding && !sentReady){
         sentReady=true;
         try{ if(ws&&ws.readyState===1) ws.send(JSON.stringify({type:"plank_ready"})); }catch(e){}
@@ -287,20 +299,20 @@ function wireHoldMode(){
         sentReady=false;
         setStatus("Get into a plank position…");
       }
-      youScoreEl.textContent="0";
       return;
     }
     if(plankPhase==="count"){
       youScoreEl.classList.toggle("wobble", !holding);
-      return;                            // countdown handled by plank_go handler
+      return;
     }
-    // phase 3: LIVE — seconds held = score
-    const s=Math.floor(HOLD.secs);
-    if(s!==S.myReps){ S.myReps=s; youScoreEl.textContent=s; pushReps(); updatePresence(); }
+    // phase 3: LIVE — a shared elapsed timer, NOT a score. First to drop loses.
+    const el=(performance.now()-plankStart)/1000;
+    const m=Math.floor(el/60), s=Math.floor(el%60);
+    clockEl.textContent=`${m}:${String(s).padStart(2,"0")}`;
     youScoreEl.classList.toggle("wobble", !holding);
   };
   onHoldFailed = ()=>{
-    if(plankPhase!=="live" || !S.active) return;   // drops before "live" don't count
+    if(plankPhase!=="live" || !S.active) return;
     try{ if(ws&&ws.readyState===1) ws.send(JSON.stringify({type:"broke"})); }catch(e){}
     S.active=false;
     setStatus("You dropped! 💀", true); speak("You dropped!", true);
