@@ -10,7 +10,7 @@ const SERVER_URL = params.get("server") || DEFAULT_SERVER;
 const JOIN_CODE = (params.get("join") || "").toUpperCase().slice(0,4);
 
 const $ = id => document.getElementById(id);
-const screens = { landing:$("landing"), game:$("game"), results:$("results"), board:$("board"), daily:$("daily"), ffa:$("ffa") };
+const screens = { landing:$("landing"), game:$("game"), results:$("results"), board:$("board"), daily:$("daily"), ffa:$("ffa"), journey:$("journey"), jday:$("jday"), jrun:$("jrun"), jcoach:$("jcoach") };
 function show(name){ for(const k in screens) screens[k].classList.toggle("on", k===name); }
 
 const video=$("video"), overlay=$("overlay"), octx=overlay.getContext("2d");

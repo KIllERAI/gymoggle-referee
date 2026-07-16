@@ -52,6 +52,7 @@
         <input id="joinCode" maxlength="4" placeholder="CODE" autocomplete="off" />
         <button id="joinBtn" class="btn ghost">Join</button>
       </div>
+      <button id="journeyBtn" class="btn ghost wide">🗺️ 30-Day Journey</button>
       <button id="ffaBtn" class="btn ghost wide">👥 Group Battle (2-8)</button>
       <button id="runBtn" class="btn ghost wide">🦍 Escape the Jungle</button>
       <button id="dailyBtn" class="btn ghost wide">📅 Daily Tasks</button>
@@ -59,6 +60,47 @@
     </div>
     <p class="fineprint">Find a random opponent, or create a game and share the code with a friend.
       Camera stays on your device — only your rep count is sent.</p>
+  </section>
+
+  <!-- ===== 🗺️ 30-DAY JOURNEY ===== -->
+  <section id="journey" class="screen">
+    <div class="j-head">
+      <button class="j-back" id="jBack">←</button>
+      <div class="j-htxt"><div class="j-title">30-Day Journey</div>
+        <div class="j-prog"><div class="j-progbar"><i id="jProgFill"></i></div>
+        <span id="jProgTxt">Day 1 of 30</span></div></div>
+    </div>
+    <div class="j-path" id="jPath"></div>
+  </section>
+
+  <section id="jday" class="screen">
+    <div class="jday-head">
+      <button class="j-back" id="jdayBack">←</button>
+      <div class="jday-ico" id="jdayIcon">🦵</div>
+      <div class="jday-title" id="jdayTitle">Day 1</div>
+    </div>
+    <div class="jday-list" id="jdayList"></div>
+    <button class="btn primary wide" id="jdayFinish" style="display:none">Finish day 🎉</button>
+  </section>
+
+  <section id="jrun" class="screen">
+    <div class="jrun-cam" id="jrunCam"></div>
+    <div class="jrun-hud">
+      <button class="j-back" id="jrunQuit">← Quit</button>
+      <div class="jrun-name" id="jrunName">Squats</div>
+      <div class="jrun-count"><span id="jrunNow">0</span><b> / <span id="jrunTarget">12</span></b></div>
+      <div class="jrun-bar"><i id="jrunBar"></i></div>
+      <div class="jrun-hint" id="jrunHint">Get in frame — go!</div>
+    </div>
+  </section>
+
+  <section id="jcoach" class="screen">
+    <button class="j-back" id="jcoachQuit">← Back</button>
+    <div class="jcoach-anim" id="jcoachAnim"></div>
+    <div class="jcoach-name" id="jcoachName">Lunges</div>
+    <div class="jcoach-sets" id="jcoachSets">3 × 10</div>
+    <div class="jcoach-timer" id="jcoachTimer">40s</div>
+    <button class="btn primary wide" id="jcoachDone" disabled>Wait…</button>
   </section>
 
   <!-- ===== 👥 GROUP BATTLE (FREE-FOR-ALL 2-8) ===== -->
@@ -234,6 +276,7 @@
   <script src="js/daily.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
   <script src="js/multiplayer_ffa.js"></script>
+  <script src="js/journey.js"></script>
   <!-- js/games/runner.js is PARKED — not loaded -->
 </body>
 </html>
