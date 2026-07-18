@@ -10,9 +10,9 @@ function connect(){
   catch(e){ setStatus("Bad server address",true); return; }
 
   ws.onopen = ()=>{
-    if(S.intent==="create") ws.send(JSON.stringify({type:"create", exercise:chosenExercise, pid:PID, name:S.name}));
-    else if(S.intent==="join") ws.send(JSON.stringify({type:"join", code:S.code, pid:PID, name:S.name}));
-    else if(S.intent==="quick") ws.send(JSON.stringify({type:"quick", exercise:chosenExercise, pid:PID, name:S.name}));
+    if(S.intent==="create") ws.send(JSON.stringify({type:"create", exercise:chosenExercise, pid:PID, name:S.name, token:window.PTOKEN}));
+    else if(S.intent==="join") ws.send(JSON.stringify({type:"join", code:S.code, pid:PID, name:S.name, token:window.PTOKEN}));
+    else if(S.intent==="quick") ws.send(JSON.stringify({type:"quick", exercise:chosenExercise, pid:PID, name:S.name, token:window.PTOKEN}));
   };
   ws.onmessage = ev=>{
     const d=JSON.parse(ev.data), t=d.type;

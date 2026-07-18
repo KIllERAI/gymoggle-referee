@@ -81,21 +81,38 @@ function renderMap(){
   $("jProgFill").style.width = (done/TOTAL_DAYS*100)+"%";
   $("jProgTxt").textContent = `Day ${Math.min(JP.current,TOTAL_DAYS)} of ${TOTAL_DAYS}`;
   const path = $("jPath");
-  let html = "";
+  // geometry: each day is a row; the node sits left/right; a dashed road snakes between them
+  const ROW = 128;                       // vertical spacing per day
+  const H = TOTAL_DAYS*ROW + 80;
+  const leftX = 26, rightX = 74;         // node centre as % of width
+  let dots = "";
+  for(let day=1; day<=TOTAL_DAYS; day++){
+    const x = day%2 ? leftX : rightX;
+    const y = 60 + (day-1)*ROW;
+    if(day>1){
+      const px = (day-1)%2 ? leftX : rightX;
+      const py = 60 + (day-2)*ROW;
+      // a smooth S-curve between consecutive nodes
+      dots += `<path class="j-road" d="M ${px} ${py} C ${px} ${(py+y)/2}, ${x} ${(py+y)/2}, ${x} ${y}"/>`;
+    }
+  }
+  let nodes = "";
   for(let day=1; day<=TOTAL_DAYS; day++){
     const p = dayPlan(day);
     const state = JP.done[day] ? "done" : (day===JP.current ? "today" : (day<JP.current ? "done" : "locked"));
-    const side = day%2 ? "left" : "right";
-    html += `<button class="j-node ${state} ${side}" data-day="${day}" ${state==="locked"?"disabled":""}>
-      <span class="j-ico">${JP.done[day]?"✓":p.icon}</span>
-      <span class="j-day">Day ${day}</span>
-      <span class="j-focus">${p.focus}</span>
-    </button>`;
+    const x = day%2 ? leftX : rightX;
+    const y = 60 + (day-1)*ROW;
+    nodes += `<button class="j-node ${state}" data-day="${day}" ${state==="locked"?"disabled":""}
+        style="left:${x}%;top:${y}px">
+        <span class="j-ico">${JP.done[day]?"✓":p.icon}</span>
+        <span class="j-meta"><span class="j-day">Day ${day}</span><span class="j-focus">${p.focus}</span></span>
+      </button>`;
   }
-  path.innerHTML = html;
+  path.style.height = H+"px";
+  path.innerHTML =
+    `<svg class="j-roadsvg" viewBox="0 0 100 ${H}" preserveAspectRatio="none">${dots}</svg>` + nodes;
   path.querySelectorAll(".j-node:not(.locked)").forEach(n=>
     n.addEventListener("click", ()=> openDay(+n.dataset.day)));
-  // scroll today into view
   const t = path.querySelector(".j-node.today"); if(t) t.scrollIntoView({block:"center"});
 }
 
@@ -139,11 +156,23 @@ function itemComplete(i){
   show("jday"); renderDayList();
 }
 
+function jCountdown(cb){
+  const ov=$("jCount"); if(!ov){ cb(); return; }
+  ov.style.display="flex"; let n=3;
+  ov.textContent=n; beep(440,.12);
+  const iv=setInterval(()=>{
+    n--;
+    if(n>0){ ov.textContent=n; beep(440,.12); }
+    else if(n===0){ ov.textContent="GO!"; beep(880,.18); }
+    else { clearInterval(iv); ov.style.display="none"; cb(); }
+  }, 700);
+}
+
 function startItem(i){
   if(dayItemState[i]) return;               // already done
   const it = dayPlan(curDay).items[i];
-  if(it.type==="count")      jCount(it, i);
-  else if(it.type==="hold")  jHold(it, i);
+  if(it.type==="count")      { show("jrun"); jCountdown(()=> jCount(it, i)); }
+  else if(it.type==="hold")  { show("jrun"); jCountdown(()=> jHold(it, i)); }
   else if(it.type==="coach") jCoach(it, i);
   else if(it.type==="rest")  jCoach(it, i);
   else if(it.type==="battle")jBattle(it, i);
@@ -151,7 +180,6 @@ function startItem(i){
 
 /* COUNTED — a clean rep counter (no boss/coins UI). Uses the onRep hook. */
 async function jCount(it, i){
-  show("jrun");
   S.exercise = it.ex; stage="up"; jackFeetMin=null;
   let n = 0;
   $("jrunName").textContent = it.name;
@@ -167,6 +195,7 @@ async function jCount(it, i){
     n++; $("jrunNow").textContent = n;
     $("jrunBar").style.width = Math.min(100, n/it.target*100)+"%";
     repPop(); beep(660,.05);
+    const g=$("jrunGor"); if(g){ g.classList.remove("pump"); void g.offsetWidth; g.classList.add("pump"); }
     if(n>=it.target){ onRep=null; jRunDone(i); }
   };
   $("jrunQuit").onclick = ()=>{ onRep=null; show("jday"); };
@@ -174,7 +203,6 @@ async function jCount(it, i){
 
 /* HOLD (plank) — uses onHoldTick/onHoldFailed */
 async function jHold(it, i){
-  show("jrun");
   S.exercise = "plank"; 
   $("jrunName").textContent = it.name;
   $("jrunNow").textContent = "0.0";

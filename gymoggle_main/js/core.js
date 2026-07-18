@@ -7,10 +7,11 @@
 const DEFAULT_SERVER = "wss://gymoggle-referee.onrender.com";
 const params = new URLSearchParams(location.search);
 const SERVER_URL = params.get("server") || DEFAULT_SERVER;
+const HTTP_BASE = SERVER_URL.replace(/^ws/, "http");   // wss->https for REST calls
 const JOIN_CODE = (params.get("join") || "").toUpperCase().slice(0,4);
 
 const $ = id => document.getElementById(id);
-const screens = { landing:$("landing"), game:$("game"), results:$("results"), board:$("board"), daily:$("daily"), ffa:$("ffa"), journey:$("journey"), jday:$("jday"), jrun:$("jrun"), jcoach:$("jcoach") };
+const screens = { landing:$("landing"), game:$("game"), results:$("results"), board:$("board"), daily:$("daily"), ffa:$("ffa"), journey:$("journey"), jday:$("jday"), jrun:$("jrun"), jcoach:$("jcoach"), how:$("how") };
 function show(name){ for(const k in screens) screens[k].classList.toggle("on", k===name); }
 
 const video=$("video"), overlay=$("overlay"), octx=overlay.getContext("2d");
@@ -22,8 +23,10 @@ const S = { me:null, myReps:0, oppReps:0, active:false, duration:60, startTs:0,
 let chosenExercise = "squats";   // creator's pick on the landing screen
 let busy = false;                // true while a game is starting/active (blocks re-entry)
 
-// lightweight persistent identity for stats/leaderboard (no signup)
-const PID = (function(){
+// Identity comes from Google login. auth.js sets window.PID (= var PID here, since this
+// is a classic script) to the Supabase user id before the app boots. Until then we fall
+// back to a local anon id so nothing throws.
+var PID = (function(){
   try{
     let id = localStorage.getItem("gymoggle_pid");
     if(!id){ id = "p_"+Math.random().toString(36).slice(2,10)+Date.now().toString(36); localStorage.setItem("gymoggle_pid", id); }
@@ -241,9 +244,20 @@ try{
 // best-effort: tell the server we're gone if the tab closes mid-game
 window.addEventListener("pagehide", ()=>{ try{ if(ws && ws.readyState===1) ws.send(JSON.stringify({type:"leave"})); }catch(e){} });
 
-/* ---------- arrived via a share link (?join=CODE) ---------- */
-if(JOIN_CODE && JOIN_CODE.length===4){
-  $("joinCode").value = JOIN_CODE;
-  const note=$("challengeNote"); if(note) note.style.display="block";
-  $("name").focus();
+/* ---------- How to Play wiring ---------- */
+(function(){
+  const b=$("howBtn"); if(b) b.addEventListener("click", ()=> show("how"));
+  const back=$("howBack"); if(back) back.addEventListener("click", ()=> show("landing"));
+  const go=$("howStart"); if(go) go.addEventListener("click", ()=> show("landing"));
+})();
+
+/* ---------- the app boots only AFTER Google login completes (auth.js calls this) ---------- */
+function onAuthReady(){
+  // name field defaults to the chosen username
+  const nm = $("name"); if(nm && window.PNAME) nm.value = window.PNAME;
+  // arrived via a share link (?join=CODE)
+  if(JOIN_CODE && JOIN_CODE.length===4){
+    $("joinCode").value = JOIN_CODE;
+    const note=$("challengeNote"); if(note) note.style.display="block";
+  }
 }

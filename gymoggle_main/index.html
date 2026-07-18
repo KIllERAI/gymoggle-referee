@@ -11,6 +11,7 @@
 
 </head>
 <body>
+  <div id="authScreen" class="auth-screen" style="display:none"></div>
 
   <!-- ===== INTRO SPLASH ===== -->
   <div id="splash">
@@ -56,6 +57,7 @@
       <button id="ffaBtn" class="btn ghost wide">👥 Group Battle (2-8)</button>
       <button id="runBtn" class="btn ghost wide">🦍 Escape the Jungle</button>
       <button id="dailyBtn" class="btn ghost wide">📅 Daily Tasks</button>
+      <button id="howBtn" class="btn ghost wide">❓ How to Play</button>
       <button id="boardBtn" class="btn ghost wide">🏆 Leaderboard</button>
     </div>
     <p class="fineprint">Find a random opponent, or create a game and share the code with a friend.
@@ -85,8 +87,17 @@
 
   <section id="jrun" class="screen">
     <div class="jrun-cam" id="jrunCam"></div>
+    <div class="j-countdown" id="jCount" style="display:none"></div>
     <div class="jrun-hud">
       <button class="j-back" id="jrunQuit">← Quit</button>
+      <div class="jrun-gorilla" id="jrunGor">
+        <svg viewBox="0 0 100 100"><ellipse class="gb" cx="50" cy="62" rx="26" ry="26"/>
+          <rect class="gb" x="14" y="44" width="13" height="40" rx="6.5"/><rect class="gb" x="73" y="44" width="13" height="40" rx="6.5"/>
+          <circle class="gb" cx="30" cy="28" r="6"/><circle class="gb" cx="70" cy="28" r="6"/>
+          <ellipse class="gb" cx="50" cy="30" rx="19" ry="18"/><ellipse class="gf" cx="50" cy="34" rx="13" ry="13"/>
+          <circle class="ge" cx="43" cy="30" r="3.2"/><circle class="ge" cx="57" cy="30" r="3.2"/>
+          <circle class="gp" cx="43.4" cy="30.4" r="1.6"/><circle class="gp" cx="57.4" cy="30.4" r="1.6"/></svg>
+      </div>
       <div class="jrun-name" id="jrunName">Squats</div>
       <div class="jrun-count"><span id="jrunNow">0</span><b> / <span id="jrunTarget">12</span></b></div>
       <div class="jrun-bar"><i id="jrunBar"></i></div>
@@ -117,6 +128,36 @@
     <div class="ffa-results" id="ffaResults" style="display:none"></div>
     <div class="ffa-chatbox" id="ffaChat"></div>
     <button class="btn ghost" id="ffaLeave">← Leave</button>
+  </section>
+
+  <!-- ===== ❓ HOW TO PLAY ===== -->
+  <section id="how" class="screen">
+    <div class="how-head">
+      <button class="j-back" id="howBack">←</button>
+      <h2>How to Play</h2>
+    </div>
+    <div class="how-body">
+      <div class="how-step"><div class="how-n">1</div><div>
+        <b>Pick your battle</b><p>Choose squats, push-ups, jacks, or Plank Chicken. Then tap <b>Find Opponent</b> for a random match, or <b>Create Game</b> to get a code and play a friend.</p></div></div>
+      <div class="how-step"><div class="how-n">2</div><div>
+        <b>Set up your camera</b><p>Prop your phone or laptop so your <b>whole body</b> is in frame. Stand back — the camera needs to see you move. Good lighting helps a lot.</p></div></div>
+      <div class="how-step"><div class="how-n">3</div><div>
+        <b>Do the reps</b><p>The camera counts automatically — no tapping. Squat, push, or jump and watch your number climb. Most reps in the time limit wins.</p></div></div>
+      <div class="how-step"><div class="how-n">4</div><div>
+        <b>Plank Chicken 🧱</b><p>A hold battle — both get into a plank, then it's a staredown. <b>First one to drop loses.</b> No timer, pure willpower.</p></div></div>
+      <div class="how-step"><div class="how-n">5</div><div>
+        <b>Daily tasks & leaderboard</b><p>Come back daily for 3 fresh tasks and coins. Climb the leaderboard by winning matches and hitting personal bests.</p></div></div>
+      <div class="how-tips">
+        <b>💡 Tips</b>
+        <ul>
+          <li>Face the camera straight-on for push-ups and planks.</li>
+          <li>Full range of motion — half-reps may not count.</li>
+          <li>Playing a friend? Trash talk in the lobby chat first. 😤</li>
+          <li>Your camera <b>never leaves your device</b> — only your rep count is sent.</li>
+        </ul>
+      </div>
+      <button class="btn primary wide" id="howStart">Let's go</button>
+    </div>
   </section>
 
   <!-- ===== LEADERBOARD ===== -->
@@ -270,6 +311,7 @@
   <div class="toast" id="toast"></div>
 
 <script src="js/core.js"></script>
+  <script src="js/auth.js"></script>
   <script src="js/detection.js"></script>
   <script src="js/multiplayer.js"></script>
   <script src="js/leaderboard.js"></script>
