@@ -523,12 +523,9 @@ document.querySelectorAll(".ex").forEach(b=>{
 });
 
 $("findBtn").addEventListener("click", ()=> enterGame("quick", null));
-$("createBtn").addEventListener("click", ()=> enterGame("create", null));
-$("joinBtn").addEventListener("click", ()=>{
-  const code=$("joinCode").value.trim().toUpperCase();
-  if(code.length<4){ toast("Enter the 4-character code."); return; }
-  enterGame("join", code);
-});
+// NOTE: createBtn + joinBtn are now wired by multiplayer_ffa.js to the unified
+// Group Battle system. The 1v1 create/join logic below stays available (used
+// internally / for rematch), just no longer bound to those landing buttons.
 $("joinCode").addEventListener("input", e=>{ e.target.value=e.target.value.toUpperCase(); });
 $("againBtn").addEventListener("click", ()=>{
   // works both as "request rematch" and "accept opponent's rematch"

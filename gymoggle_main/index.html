@@ -48,13 +48,12 @@
       </div>
       <button id="findBtn" class="btn primary">Find opponent</button>
       <div class="or"><i></i>Or play a friend<i></i></div>
-      <button id="createBtn" class="btn ghost wide">Create game</button>
+      <button id="createBtn" class="btn ghost wide">👥 Create / Group Battle</button>
       <div class="joinrow">
         <input id="joinCode" maxlength="4" placeholder="CODE" autocomplete="off" />
         <button id="joinBtn" class="btn ghost">Join</button>
       </div>
       <button id="journeyBtn" class="btn ghost wide">🗺️ 30-Day Journey</button>
-      <button id="ffaBtn" class="btn ghost wide">👥 Group Battle (2-8)</button>
       <button id="runBtn" class="btn ghost wide">🦍 Escape the Jungle</button>
       <button id="dailyBtn" class="btn ghost wide">📅 Daily Tasks</button>
       <button id="howBtn" class="btn ghost wide">❓ How to Play</button>
@@ -126,7 +125,13 @@
     <div class="ffa-status" id="ffaStatus"></div>
     <div class="ffa-ctrl" id="ffaCtrl"></div>
     <div class="ffa-results" id="ffaResults" style="display:none"></div>
-    <div class="ffa-chatbox" id="ffaChat"></div>
+    <div class="ffa-chat" id="ffaChatPanel">
+      <div class="ffa-chat-msgs" id="ffaChat"></div>
+      <div class="ffa-chat-in">
+        <input id="ffaChatInput" maxlength="140" placeholder="Say something…" autocomplete="off"/>
+        <button id="ffaChatSend">Send</button>
+      </div>
+    </div>
     <button class="btn ghost" id="ffaLeave">← Leave</button>
   </section>
 

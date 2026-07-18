@@ -642,3 +642,19 @@
   background:var(--void2); border:1px solid var(--line); border-radius:12px; padding:12px 14px; line-height:1.4; }
 .primer-points span{ font-size:18px; flex:none; }
 .primer-points b{ color:var(--you); }
+
+/* ===================== FFA: countdown, chat, timer ===================== */
+.ffa-countdown{ position:absolute; inset:0; z-index:30; display:flex; align-items:center; justify-content:center;
+  font-family:"Anton"; font-size:clamp(90px,26vw,190px); color:var(--gold);
+  text-shadow:0 0 40px rgba(255,210,63,.6); background:rgba(8,6,14,.55); backdrop-filter:blur(4px); }
+.ffa-chat{ display:none; flex-direction:column; gap:6px; padding:10px 12px 12px;
+  border-top:1px solid var(--line); background:rgba(13,11,20,.6); }
+.ffa-chat-msgs{ max-height:120px; overflow-y:auto; display:flex; flex-direction:column; gap:4px; font-size:13px; }
+.ffa-chat-msgs .msg{ color:var(--bone); line-height:1.4; }
+.ffa-chat-msgs .msg b{ font-weight:800; }
+.ffa-chat-in{ display:flex; gap:8px; }
+.ffa-chat-in input{ flex:1; background:var(--void2); border:1px solid var(--line); color:var(--bone);
+  padding:9px 12px; border-radius:10px; font-size:14px; font-family:inherit; }
+.ffa-chat-in input:focus{ outline:none; border-color:var(--you); }
+.ffa-chat-in button{ background:var(--you); color:#04201e; border:none; border-radius:10px;
+  padding:9px 16px; font-weight:800; cursor:pointer; }

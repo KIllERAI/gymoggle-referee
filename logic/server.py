@@ -4680,11 +4680,12 @@ async def begin_match(code):
 import time as _time
 
 BOT_NAMES = [
-    "Riya","Arjun","Sam","Kabir","Mia","Leo","Zara","Neil","Adi","Tara",
-    "Jay","Nina","Ravi","Kim","Alex","Dev","Sana","Omar","Ivy","Max",
-    "Priya","Rohan","Ella","Vik","Noor","Ash","Kai","Reyansh","Aria","Ben",
-    "Isha","Yuki","Diego","Lena","Tom","Fatima","Chris","Anya","Raj","Cleo",
-    "Maya","Finn","Sara","Ib","Nomi","Zed","Lux","Rex","Bo","Quinn",
+    "riya_22","arjunnn","sam_k","kabir.x","mia_fit","leo7","zara_z","neilll","adi_04","tara.m",
+    "jay_x7","nina__","ravi.99","kimmy_k","alexxx","dev_op","sana_z","omar.k","ivy_23","max_out",
+    "priya_p","rohan_11","ella.x","vik_08","noor__","ash_ley","kai.99","reyansh","aria_a","ben_10",
+    "isha.k","yuki_x","diego7","lena__","tom_k","fatima.z","chris99","anya.a","raj_00","cleo_x",
+    "maya_m","finn.7","sara__","ib_x","nomi99","zed_z","lux.k","rex_00","bo__","quinn7",
+    "big_mike","fit_freak","noscope","xX_dan","gym_rat9","reps4days","chad.99","lil_squat","the_beast","sweatybetty",
 ]
 BOT_TAUNTS = [
     "let's go 💪","easy win incoming","try to keep up 😏","warmed up already",
@@ -4711,31 +4712,39 @@ def make_bot(exercise):
     ident[ws] = {"pid": "bot_" + str(random.randint(10000, 99999)), "name": name}
     return ws
 
+COUNTDOWN_PAD = 3.0    # ~length of the 3-2-1-GO countdown before reps count
+BOT_START_AT  = 28     # bot stays at 0 until the match clock counts down to this
+BOT_CAP = {"squats": 24, "pushups": 13, "jacks": 27, "situps": 18}  # HARD ceilings — never exceed
+
 def bot_target(exercise):
-    """A believable beginner performance for this exercise, with spread."""
+    """A believable BEGINNER performance — kept in the lower/mid range, never elite."""
     if exercise == "plank":
-        return random.gauss(38, 12)          # seconds held before dropping
-    base = {"squats": 26, "pushups": 16, "jacks": 34, "situps": 20}.get(exercise, 24)
-    return max(6, random.gauss(base, base * 0.28))
+        return random.uniform(30, 45)        # seconds held before dropping (30-45s window)
+    base = {"squats": 17, "pushups": 9, "jacks": 20, "situps": 13}.get(exercise, 15)
+    val = random.gauss(base, base * 0.24)
+    cap = BOT_CAP.get(exercise, 24)
+    return max(6, min(cap, val))             # clamp: floor 6, hard ceiling per exercise
 
 def bot_rep_schedule(total, duration):
-    """Return a list of timestamps (seconds from start) at which the bot does
-    each rep. Models a human: slow start, steady middle, tired dip, final push."""
+    """Return a list of timestamps (seconds from the "start" broadcast) at which
+    the bot does each rep. The bot stays at ZERO until the match clock counts
+    down to BOT_START_AT (so it never has a head-start during the 3-2-1-GO
+    countdown), then reps across the remaining time with a human-like curve."""
     total = int(round(total))
     if total <= 0:
         return []
     times = []
-    # assign each rep a position on a 'effort curve' across the match
     for i in range(total):
         frac = (i + 0.5) / total
-        # pace multiplier: start ~0.7x, mid ~1x, dip ~0.85x near 70%, surge at end
         if frac < 0.15:      pace = 0.70 + frac
         elif frac < 0.65:    pace = 1.0
         elif frac < 0.85:    pace = 0.82
         else:                pace = 1.25            # final surge
         times.append(pace)
-    # normalize the cumulative "effort" to fit inside the match duration (minus a tail)
-    span = duration * random.uniform(0.82, 0.96)
+    # the bot only starts once the clock has ticked down to BOT_START_AT.
+    # elapsed_at_start = duration - BOT_START_AT  (e.g. 35 - 28 = 7s in)
+    begin = COUNTDOWN_PAD + (duration - BOT_START_AT)
+    span = (BOT_START_AT * random.uniform(0.80, 0.95))   # fit reps into what's left
     cum = []
     acc = 0.0
     for p in times:
@@ -4744,8 +4753,8 @@ def bot_rep_schedule(total, duration):
     scale = span / cum[-1]
     out = []
     for c in cum:
-        jitter = random.uniform(-0.18, 0.18)       # human noise per rep
-        out.append(max(0.0, c * scale + jitter))
+        jitter = random.uniform(-0.18, 0.18)
+        out.append(begin + max(0.0, c * scale + jitter))
     out.sort()
     return out
 
@@ -4890,18 +4899,25 @@ async def mstart(code):
     if not r or r["started"]: return
     r["started"] = True
     is_plank = (r["exercise"] == "plank")
+    dur = int(r.get("duration") or DURATION)
+    dur = max(15, min(300, dur))                      # clamp 15s..5min
     for p in r["players"].values():
         p["reps"]=0; p["out"]=False; p["ready"]=False
     await mbroadcast(r, {"type":"m_start","exercise":r["exercise"],
                          "mode":("hold" if is_plank else "reps"),
-                         "duration":(PLANK_MAX if is_plank else DURATION)})
-    r["task"] = asyncio.create_task(mrun(code, is_plank))
+                         "duration":(PLANK_MAX if is_plank else dur)})
+    r["task"] = asyncio.create_task(mrun(code, is_plank, dur))
 
-async def mrun(code, is_plank):
+async def mrun(code, is_plank, dur):
+    r = mrooms.get(code)
+    if not r: return
+    # a synced 3-2-1-GO countdown so the match doesn't start abruptly
+    await mbroadcast(r, {"type":"m_countdown", "count":3})
+    await asyncio.sleep(3.2)
     r = mrooms.get(code)
     if not r: return
     if is_plank:
-        # last one still holding wins
+        # last one still holding wins (no countdown-to-win; just a running timer)
         await mbroadcast(r, {"type":"m_go"})
         waited=0.0
         while waited < PLANK_MAX:
@@ -4912,7 +4928,7 @@ async def mrun(code, is_plank):
             if len(alive) <= 1: break
     else:
         await mbroadcast(r, {"type":"m_go"})
-        await asyncio.sleep(DURATION)
+        await asyncio.sleep(dur)
     r = mrooms.get(code)
     if not r: return
     # decide winner
@@ -5106,6 +5122,7 @@ async def referee(ws: WebSocket):
                 mrooms[code] = {
                     "host_pid": i.get("pid", "anon"), "size": size,
                     "exercise": data.get("exercise", "squats"),
+                    "duration": max(15, min(300, int(data.get("duration", DURATION)))),
                     "started": False, "task": None,
                     "players": {ws: {"pid": i.get("pid","anon"), "name": i.get("name","Player"),
                                      "color": COLORS[0], "reps": 0, "out": False, "ready": False}},

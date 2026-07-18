@@ -21,14 +21,14 @@ function ffaConnect(onOpen){
 function ffaSend(o){ try{ if(FFA.mws && FFA.mws.readyState===1) FFA.mws.send(JSON.stringify(o)); }catch(e){} }
 
 /* ---------- entry: create / join ---------- */
-function ffaCreate(size, exercise){
-  FFA.size=size; FFA.exercise=exercise; FFA.host=true;
-  ffaConnect(()=> ffaSend({type:"m_create", size, exercise, pid:PID, name:playerName()}));
+function ffaCreate(size, exercise, duration){
+  FFA.size=size; FFA.exercise=exercise; FFA.host=true; FFA.duration=duration||30;
+  ffaConnect(()=> ffaSend({type:"m_create", size, exercise, duration:FFA.duration, pid:PID, name:playerName(), token:window.PTOKEN}));
   show("ffa"); ffaLobbyWaiting("Creating room…");
 }
 function ffaJoin(code){
   FFA.host=false;
-  ffaConnect(()=> ffaSend({type:"m_join", code:code.toUpperCase(), pid:PID, name:playerName()}));
+  ffaConnect(()=> ffaSend({type:"m_join", code:code.toUpperCase(), pid:PID, name:playerName(), token:window.PTOKEN}));
   show("ffa"); ffaLobbyWaiting("Joining "+code.toUpperCase()+"…");
 }
 function playerName(){ return (S.name || ($("name")&&$("name").value.trim()) || "Player"); }
@@ -45,6 +45,7 @@ function ffaMsg(d){
     ffaRenderLobby();
   }
   else if(t==="m_start"){ ffaBeginMatch(d); }
+  else if(t==="m_countdown"){ ffaCountdown(d.count||3); }
   else if(t==="m_go"){ ffaGo(); }
   else if(t==="m_score"){ const p=FFA.players.find(x=>x.pid===d.pid); if(p){ p.reps=d.reps; ffaUpdateCell(p); } }
   else if(t==="m_dropped"){ const p=FFA.players.find(x=>x.pid===d.pid); if(p){ p.out=true; ffaUpdateCell(p);
@@ -62,6 +63,7 @@ function ffaLobbyWaiting(msg){
 }
 function ffaRenderLobby(){
   FFA.on=true;
+  ffaShowChat(true);
   $("ffaBar").style.display="flex";
   $("ffaTitle").textContent = "Room "+(FFA.code||"");
   $("ffaSub").textContent = `${(EXERCISES[FFA.exercise]||{label:FFA.exercise}).label} · ${FFA.players.length}/${FFA.size} players`;
@@ -129,7 +131,21 @@ async function ffaBeginMatch(d){
   // route reps / holds to FFA
   if(FFA.mode==="hold"){ ffaWireHold(); }
   else { onRep = ffaRep; onHoldTick=()=>{}; onHoldFailed=()=>{}; }
+  ffaShowChat(false);
   setFfaStatus(FFA.mode==="hold" ? "Get into a plank…" : "Get ready…");
+}
+function ffaCountdown(n){
+  let el=$("ffaCount");
+  if(!el){ el=document.createElement("div"); el.id="ffaCount"; el.className="ffa-countdown"; $("ffa").appendChild(el); }
+  el.style.display="flex";
+  let c=n;
+  el.textContent=c; beep(440,.12);
+  const iv=setInterval(()=>{
+    c--;
+    if(c>0){ el.textContent=c; beep(440,.12); }
+    else if(c===0){ el.textContent="GO!"; beep(880,.2); }
+    else { clearInterval(iv); el.style.display="none"; }
+  }, 800);
 }
 function ffaGo(){
   if(FFA.mode==="hold"){ FFA.plankPhase="live"; resetHold(); FFA.startTs=performance.now();
@@ -207,6 +223,7 @@ function ffaResults(d){
       <button class="btn ghost" id="ffaExit">Exit</button>
     </div>`;
   playTrophy();
+  ffaShowChat(true);
   if(iWon) confettiBurst && confettiBurst();
   $("ffaAgain").addEventListener("click", ()=>{
     wrap.style.display="none";
@@ -229,6 +246,8 @@ function ffaExit(){
   FFA.on=false; FFA.started=false; onRep=null; onHoldTick=()=>{}; onHoldFailed=()=>{};
   if(FFA.clockIv) clearInterval(FFA.clockIv);
   const r=$("ffaResults"); if(r) r.style.display="none";
+  ffaShowChat(false);
+  const cb=$("ffaChat"); if(cb) cb.innerHTML="";
   show("landing");
 }
 
@@ -236,9 +255,23 @@ function ffaExit(){
 function ffaAddChat(d){
   const box=$("ffaChat"); if(!box) return;
   const div=document.createElement("div"); div.className="msg";
-  div.innerHTML=`<b style="color:${d.color}">${esc(d.from)}:</b> ${esc(d.text)}`;
+  const mine = d.pid===PID;
+  div.innerHTML=`<b style="color:${d.color||'var(--you)'}">${esc(d.from)}${mine?" (you)":""}:</b> ${esc(d.text)}`;
   box.appendChild(div); box.scrollTop=box.scrollHeight;
 }
+function ffaShowChat(on){
+  const p=$("ffaChatPanel"); if(p) p.style.display = on ? "flex" : "none";
+}
+function ffaSendChat(){
+  const i=$("ffaChatInput"); if(!i) return;
+  const txt=(i.value||"").trim(); if(!txt) return;
+  ffaSend({type:"m_chat", text:txt}); i.value="";
+}
+(function(){
+  const send=$("ffaChatSend"), inp=$("ffaChatInput");
+  if(send) send.addEventListener("click", ffaSendChat);
+  if(inp) inp.addEventListener("keydown", e=>{ if(e.key==="Enter") ffaSendChat(); });
+})();
 
 /* ---------- landing entry: pick size + exercise, then create ---------- */
 function ffaOpenCreate(){
@@ -259,6 +292,10 @@ function ffaOpenCreate(){
       <div class="seg wrap" id="ffaExSeg">
         ${exs.map(([k,l],i)=>`<button data-ex="${k}"${i===0?' class="on"':''}>${l}</button>`).join("")}
       </div>
+      <label id="ffaTimerLbl">Timer</label>
+      <div class="seg wrap" id="ffaTimeSeg">
+        ${[[30,"30s"],[60,"1m"],[120,"2m"],[180,"3m"],[300,"5m"]].map(([s,l],i)=>`<button data-s="${s}"${i===0?' class="on"':''}>${l}</button>`).join("")}
+      </div>
       <button class="btn primary wide" id="ffaMake">Create room</button>
       <div class="or"><i></i>or join<i></i></div>
       <div class="joinrow">
@@ -266,22 +303,30 @@ function ffaOpenCreate(){
         <button class="btn ghost" id="ffaJoinBtn">Join</button>
       </div>
     </div>`;
-  let size=4, ex="squats";
+  let size=4, ex="squats", dur=30;
   $("ffaSizeSeg").addEventListener("click", e=>{ const b=e.target.closest("button"); if(!b)return;
     [...e.currentTarget.children].forEach(x=>x.classList.remove("on")); b.classList.add("on"); size=+b.dataset.n; });
   $("ffaExSeg").addEventListener("click", e=>{ const b=e.target.closest("button"); if(!b)return;
-    [...e.currentTarget.children].forEach(x=>x.classList.remove("on")); b.classList.add("on"); ex=b.dataset.ex; });
-  $("ffaMake").addEventListener("click", ()=> ffaCreate(size, ex));
+    [...e.currentTarget.children].forEach(x=>x.classList.remove("on")); b.classList.add("on"); ex=b.dataset.ex;
+    // plank = no timer-to-win, it's last-one-standing; grey the timer out
+    const isPlank = ex==="plank";
+    $("ffaTimeSeg").style.opacity = isPlank ? ".4" : "1";
+    $("ffaTimeSeg").style.pointerEvents = isPlank ? "none" : "auto";
+    $("ffaTimerLbl").textContent = isPlank ? "Timer (plank = last one holding wins)" : "Timer";
+  });
+  $("ffaTimeSeg").addEventListener("click", e=>{ const b=e.target.closest("button"); if(!b)return;
+    [...e.currentTarget.children].forEach(x=>x.classList.remove("on")); b.classList.add("on"); dur=+b.dataset.s; });
+  $("ffaMake").addEventListener("click", ()=> ffaCreate(size, ex, dur));
   const jb=$("ffaJoinBtn"), jc=$("ffaJoinCode");
   if(jb) jb.addEventListener("click", ()=>{ const code=(jc.value||"").trim(); if(code.length>=3) ffaJoin(code); });
   if(jc) jc.addEventListener("keydown", e=>{ if(e.key==="Enter"){ const code=(jc.value||"").trim(); if(code.length>=3) ffaJoin(code); } });
 }
 
-/* wire landing buttons */
+/* wire landing buttons — Create game + Join now use the unified Group Battle system */
 (function(){
-  const b=$("ffaBtn"); if(b) b.addEventListener("click", ffaOpenCreate);
+  const create=$("createBtn"); if(create) create.addEventListener("click", ffaOpenCreate);
   const jc=$("joinCode"), jb=$("joinBtn");
-  // reuse the existing join box: if a code is entered and FFA is chosen... keep it simple:
-  // a dedicated FFA join lives in the setup card; but also let the main Join try FFA if 1v1 fails? No.
+  if(jb) jb.addEventListener("click", ()=>{ const code=(jc.value||"").trim(); if(code.length>=3) ffaJoin(code); });
+  if(jc) jc.addEventListener("keydown", e=>{ if(e.key==="Enter"){ const code=(jc.value||"").trim(); if(code.length>=3) ffaJoin(code); } });
   const leave=$("ffaLeave"); if(leave) leave.addEventListener("click", ffaExit);
 })();
