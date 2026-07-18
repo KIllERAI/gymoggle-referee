@@ -111,22 +111,30 @@ const EXERCISES = {
     }
   },
   situps: {
-    label:"Sit-ups", warn:"Side-on, lying down — full body in frame",
-    // Torso angle shoulder-hip-knee. Widened range so only a FULL lie-down-to-sit-up
-    // swing counts (small wiggles no longer register). Arms are never used.
+    label:"Sit-ups", warn:"Side-on, lying down — keep your head in frame",
+    // Counts one rep only for a FULL cycle: torso goes from fully DOWN (lying flat,
+    // big shoulder-hip-knee angle) all the way UP (small angle), then the rep fires.
+    // The HEAD (nose) must stay visible the whole time — if it drifts off screen we
+    // stop counting, because the pose estimate becomes unreliable and inflates reps.
     measure(lms){
       const sides=[[11,23,25],[12,24,26]];
       let best=null,bv=-1;
       for(const a of sides){ const v=Math.min(vis(lms[a[0]]),vis(lms[a[1]]),vis(lms[a[2]])); if(v>bv){bv=v;best=a;} }
-      if(bv<0.5) return {ok:false};
+      if(bv<0.5) return {ok:false, warnMsg:"Get your whole body side-on in frame"};
+      // require the head to be on screen and tracked
+      if(vis(lms[0]) < 0.5)
+        return {ok:false, warnMsg:"Keep your head in the frame"};
+
       const [s,h,k]=best;
       const S_=lms[s], H=lms[h];
       const ang=angle(lms[s],lms[h],lms[k]);
-      // The "down" (lying flat) state only counts if the body is actually HORIZONTAL.
-      // Standing straight has the same shoulder-hip-knee angle as lying, so without
-      // this gate you could stand and bend to fake sit-ups. Vertical body -> no "down".
+      // must actually be lying horizontal for the "down" extreme to count (blocks
+      // standing-and-bending fakes — a vertical body has the same joint angle).
       const lyingFlat = Math.abs(H.x - S_.x) > Math.abs(H.y - S_.y);
-      return {ok:true, down:(ang>140 && lyingFlat), up:ang<75, draw:[[s,h],[h,k]]};
+      // FULL extremes only: truly flat (>150) then truly curled up (<65).
+      // The rep engine requires down THEN up, so only a complete big->small swing counts.
+      return {ok:true, down:(ang>150 && lyingFlat), up:(ang<65),
+              hip:Math.round(ang), draw:[[s,h],[h,k]]};
     }
   },
   plank: {

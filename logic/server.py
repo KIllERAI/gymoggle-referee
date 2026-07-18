@@ -5219,7 +5219,7 @@ def leaderboard():
         return {"ok": False, "error": "no db"}
     out = {"ok": True, "scores": {}, "wins": []}
     try:
-        for ex in ("squats", "pushups", "situps"):
+        for ex in ("squats", "pushups", "jacks", "plank"):
             col = "best_" + ex
             r = (supabase.table("players").select("name," + col)
                  .gt(col, 0).order(col, desc=True).limit(10).execute())

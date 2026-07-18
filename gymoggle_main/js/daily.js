@@ -99,14 +99,35 @@ async function startSolo(task){
   $("raceWrap").classList.remove("on");
   show("game");
   if(!looping){ looping=true; loop(); }
-  setStatus(label+" — go!");
-  speak(label+"! Go!", true);
+  $("soloQuit").style.display = "block";       // leave option, always available
+  // countdown from 5 before anything counts
+  SOLO.armed = false;
+  soloCountdown(()=>{
+    SOLO.armed = true;
+    setStatus(label+" — go!");
+    speak("Go!", true);
+    if(SOLO.hold){ resetHold(); }
+  });
+}
+
+function soloCountdown(cb){
+  let el=$("soloCount");
+  if(!el){ el=document.createElement("div"); el.id="soloCount"; el.className="solo-countdown"; $("game").appendChild(el); }
+  el.style.display="flex";
+  let n=5;
+  el.textContent=n; beep(440,.1);
+  const iv=setInterval(()=>{
+    n--;
+    if(n>0){ el.textContent=n; beep(440,.1); }
+    else if(n===0){ el.textContent="GO!"; beep(880,.18); }
+    else { clearInterval(iv); el.style.display="none"; cb(); }
+  }, 800);
 }
 /* ---------- solo PLANK: hold the clock, don't break ---------- */
 function wireSoloHold(task){
   resetHold();
   onHoldTick = (secs, holding)=>{
-    if(!SOLO.on) return;
+    if(!SOLO.on || !SOLO.armed) return;   // wait for GO
     const shown = Math.min(task.target, secs);
     SOLO.reps = Math.floor(secs);
     $("soloNow").textContent = shown.toFixed(1);
@@ -131,6 +152,7 @@ function wireSoloHold(task){
   };
 }
 function soloRep(){
+  if(!SOLO.armed) return;          // ignore reps during the 5-count
   SOLO.reps++;
   const t=SOLO.task, left=Math.max(0, t.target-SOLO.reps);
   $("soloNow").textContent = SOLO.reps;

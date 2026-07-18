@@ -2,7 +2,6 @@
    Part of the GymOggle app. Loaded as a classic script; modules share globals. */
 
 /* ---------- leaderboard ---------- */
-const HTTP_BASE = SERVER_URL.replace(/^ws/, "http");   // wss->https, ws->http
 let boardData = null, boardTab = "scores", boardEx = "squats";
 
 async function openBoard(){
@@ -32,3 +31,22 @@ function renderBoard(){
 }
 $("boardBtn").addEventListener("click", openBoard);
 $("boardBack").addEventListener("click", ()=> show("landing"));
+
+/* tab switch: Top Scores / Most Wins */
+document.querySelectorAll(".board-tabs .btab").forEach(b=>{
+  b.addEventListener("click", ()=>{
+    document.querySelectorAll(".board-tabs .btab").forEach(x=>x.classList.remove("on"));
+    b.classList.add("on");
+    boardTab = b.dataset.tab;
+    if(boardData) renderBoard(); else openBoard();
+  });
+});
+/* exercise filter: Squats / Push-ups / Jacks / Plank */
+document.querySelectorAll("#exFilter .bex").forEach(b=>{
+  b.addEventListener("click", ()=>{
+    document.querySelectorAll("#exFilter .bex").forEach(x=>x.classList.remove("on"));
+    b.classList.add("on");
+    boardEx = b.dataset.bex;
+    if(boardData) renderBoard(); else openBoard();
+  });
+});

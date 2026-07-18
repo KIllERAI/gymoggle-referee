@@ -113,6 +113,8 @@ function gorillaSVG(color){
 /* ---------- match ---------- */
 async function ffaBeginMatch(d){
   FFA.mode=d.mode; FFA.exercise=d.exercise||FFA.exercise; FFA.started=true; FFA.myReps=0;
+  const rw=$("ffaResults"); if(rw) rw.style.display="none";   // clear any results overlay (rematch)
+  ffaShowChat(false);
   S.exercise=FFA.exercise; stage="up"; jackFeetMin=null;
   // start the camera + detection
   try{ if(!landmarker) await initModel(); await initCamera(); }
@@ -219,16 +221,21 @@ function ffaResults(d){
         <span class="nm">${esc(p.name)}</span>
         <span class="sc">${FFA.mode==="hold"?(p.out?"out":"held"):p.reps+" reps"}</span></div>`).join("")}</div>
     <div class="ffa-rbtns">
-      <button class="btn primary" id="ffaAgain">Play again</button>
+      ${FFA.host
+        ? `<button class="btn primary" id="ffaAgain">Play again</button>`
+        : `<div class="ffa-waithost">Waiting for host to start a rematch…</div>`}
       <button class="btn ghost" id="ffaExit">Exit</button>
     </div>`;
   playTrophy();
   ffaShowChat(true);
   if(iWon) confettiBurst && confettiBurst();
-  $("ffaAgain").addEventListener("click", ()=>{
+  const again=$("ffaAgain");
+  if(again) again.addEventListener("click", ()=>{
+    // host restarts the whole room -> everyone goes back to the match
     wrap.style.display="none";
-    if(FFA.host) ffaSend({type:"m_begin"}); else setFfaStatus("Waiting for host…");
+    ffaShowChat(true);
     ffaRenderLobby();
+    ffaSend({type:"m_begin"});      // server re-runs mstart -> m_start broadcasts to all
   });
   $("ffaExit").addEventListener("click", ffaExit);
 }

@@ -658,3 +658,16 @@
 .ffa-chat-in input:focus{ outline:none; border-color:var(--you); }
 .ffa-chat-in button{ background:var(--you); color:#04201e; border:none; border-radius:10px;
   padding:9px 16px; font-weight:800; cursor:pointer; }
+.ffa-waithost{ color:var(--dim); font-size:14px; padding:12px; text-align:center; }
+
+/* solo/daily countdown */
+.solo-countdown{ position:absolute; inset:0; z-index:9; display:flex; align-items:center; justify-content:center;
+  font-family:"Anton"; font-size:clamp(90px,26vw,190px); color:var(--gold);
+  text-shadow:0 0 40px rgba(255,210,63,.6); background:rgba(8,6,14,.5); backdrop-filter:blur(4px); pointer-events:none; }
+
+/* coming-soon buttons */
+.soon-label{ margin:14px 0 4px; font-size:11px; letter-spacing:.2em; text-transform:uppercase; color:var(--dim); text-align:center; }
+.btn.soon{ position:relative; opacity:.5; cursor:not-allowed; }
+.btn.soon span{ position:absolute; right:14px; top:50%; transform:translateY(-50%);
+  font-size:10px; letter-spacing:.14em; background:var(--void2); border:1px solid var(--line);
+  color:var(--gold); padding:3px 8px; border-radius:20px; }

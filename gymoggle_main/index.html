@@ -48,16 +48,17 @@
       </div>
       <button id="findBtn" class="btn primary">Find opponent</button>
       <div class="or"><i></i>Or play a friend<i></i></div>
-      <button id="createBtn" class="btn ghost wide">👥 Create / Group Battle</button>
+      <button id="createBtn" class="btn ghost wide">👥 Create Room / Group Battle</button>
       <div class="joinrow">
         <input id="joinCode" maxlength="4" placeholder="CODE" autocomplete="off" />
         <button id="joinBtn" class="btn ghost">Join</button>
       </div>
-      <button id="journeyBtn" class="btn ghost wide">🗺️ 30-Day Journey</button>
-      <button id="runBtn" class="btn ghost wide">🦍 Escape the Jungle</button>
       <button id="dailyBtn" class="btn ghost wide">📅 Daily Tasks</button>
       <button id="howBtn" class="btn ghost wide">❓ How to Play</button>
       <button id="boardBtn" class="btn ghost wide">🏆 Leaderboard</button>
+      <div class="soon-label">Coming soon</div>
+      <button class="btn ghost wide soon" disabled>🗺️ 30-Day Journey <span>SOON</span></button>
+      <button class="btn ghost wide soon" disabled>🦍 Escape the Jungle <span>SOON</span></button>
     </div>
     <p class="fineprint">Find a random opponent, or create a game and share the code with a friend.
       Camera stays on your device — only your rep count is sent.</p>
@@ -178,7 +179,8 @@
     <div class="ex-filter" id="exFilter">
       <button class="bex on" data-bex="squats">Squats</button>
       <button class="bex" data-bex="pushups">Push-ups</button>
-      <button class="bex" data-bex="situps">Sit-ups</button>
+      <button class="bex" data-bex="jacks">Jacks</button>
+      <button class="bex" data-bex="plank">Plank</button>
     </div>
     <div class="board-list" id="boardList"></div>
   </section>
