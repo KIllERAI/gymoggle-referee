@@ -25,6 +25,8 @@ let PUSHUP_DOWN_ELBOW = 100;
 let PUSHUP_FRONT_UP   = 1.05;  // <<< FRONT view: shoulders this far above hands (in shoulder-widths) = UP
 let PUSHUP_FRONT_DOWN = 0.60;  // <<< FRONT view: this close to the hands = DOWN (chest lowered)
 let PLANK_HIP_MIN = 150;
+let JUMP_RISE = 0.08;   // <<< SKIPPING: feet must rise this fraction of body height to count a jump
+let jumpBaseY = null;   // learned grounded ankle height for jump detection
 let plankBaseY = null;   // learned resting chest height for the current hold
 let PLANK_LEVEL_MAX = 0.60;   // <<< body counts as "in a plank" when shoulder~hip height gap < this
 let PLANK_DROP_MAX  = 0.35;   // <<< chest sinks more than this (shoulder-widths) below its high point = COLLAPSED    // <<< hip must stay straighter than this. Sag/pike = broken plank.
@@ -178,6 +180,29 @@ const EXERCISES = {
               draw: sideView ? [[11,23],[23,25]] : [[11,12],[23,24],[11,23],[12,24]]};
     }
   },
+  skipping: {
+    label:"Skipping", warn:"Whole body in frame — jump!",
+    // Simple jump-rope detection: count each time BOTH feet leave the ground.
+    // We learn the "grounded" ankle height (the lowest point) as a baseline, then
+    // a rep fires when the feet rise clearly above it and come back down.
+    measure(lms){
+      const need=[11,12,27,28];
+      for(const i of need){ if(vis(lms[i])<0.5) return {ok:false, warnMsg:"Step back — feet must be in frame"}; }
+      const shY=(lms[11].y+lms[12].y)/2;
+      const ankY=(lms[27].y+lms[28].y)/2;            // avg ankle height (y grows downward)
+      const bodyH=Math.abs(ankY - shY) || 0.001;     // shoulder->ankle span = personal scale
+      // grounded baseline = the LOWEST the feet go (largest y). Gentle decay so it
+      // adapts if the person shifts, without chasing a mid-jump frame.
+      if(jumpBaseY===null || ankY > jumpBaseY) jumpBaseY = ankY;
+      else jumpBaseY = jumpBaseY*0.995 + ankY*0.005;
+      const rise = (jumpBaseY - ankY) / bodyH;       // how far feet lifted vs body height
+      window.__jumpRise = rise;
+      // down = feet back near the floor (must land before the next jump counts),
+      // up   = feet clearly airborne.
+      return {ok:true, down:(rise < JUMP_RISE*0.4), up:(rise > JUMP_RISE),
+              draw:[[23,25],[25,27],[24,26],[26,28]]};
+    }
+  },
   jacks: {
     label:"Jumping Jacks", warn:"Step back — whole body in frame",
     // OPEN = hands above head AND feet apart.  CLOSED = hands down AND feet together.
@@ -201,7 +226,7 @@ const EXERCISES = {
 
 /* ---------- HOLD exercises (plank): time held, not reps ---------- */
 const HOLD = { secs:0, holding:false, brokeAt:0, failed:false, lastTs:0 };
-function resetHold(){ HOLD.secs=0; HOLD.holding=false; HOLD.brokeAt=0; HOLD.failed=false; HOLD.lastTs=performance.now(); plankBaseY=null; }
+function resetHold(){ HOLD.secs=0; HOLD.holding=false; HOLD.brokeAt=0; HOLD.failed=false; HOLD.lastTs=performance.now(); plankBaseY=null; jumpBaseY=null; }
 
 function processHold(cfg, lms){
   const m = cfg.measure(lms);
