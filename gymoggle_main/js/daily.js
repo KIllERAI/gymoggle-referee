@@ -97,6 +97,7 @@ async function startSolo(task){
   const on=$("oppPanel"); if(on){ on.classList.add("on"); on.querySelector(".opp-name").textContent="Training Partner"; }
   $("oppScore").textContent = "0";
   $("raceWrap").classList.remove("on");
+  const ck=$("clock"); if(ck){ ck.classList.add("hidden"); }   // daily tasks have no match timer
   show("game");
   if(!looping){ looping=true; loop(); }
   $("soloQuit").style.display = "block";       // leave option, always available
@@ -198,6 +199,7 @@ async function finishSolo(){
 function endSolo(){
   SOLO.on=false; busy=false;
   onHoldTick=()=>{}; onHoldFailed=()=>{};
+  const ck=$("clock"); if(ck){ ck.classList.remove("hidden"); }
   $("soloHud").style.display="none";
   $("soloQuit").style.display="none";
   $("oppPanel").classList.remove("on");

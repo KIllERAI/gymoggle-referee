@@ -73,15 +73,40 @@ function ffaRenderLobby(){
         ()=>`<div class="ffa-cell empty"><span>Waiting…</span></div>`).join("");
   // host controls
   const ctrl=$("ffaCtrl");
+  const link = ffaShareLink();
+  const shareRow = `
+    <div class="ffa-share-row">
+      <button class="btn ghost sm" id="ffaCopyLink">🔗 Copy invite link</button>
+      <button class="btn wa sm" id="ffaWhatsApp">💬 WhatsApp</button>
+    </div>`;
   if(FFA.host){
-    ctrl.innerHTML = FFA.players.length>=2
+    ctrl.innerHTML = (FFA.players.length>=2
       ? `<button class="btn primary" id="ffaStart">Start match (${FFA.players.length})</button>`
-      : `<p class="ffa-hint">Share code <b>${FFA.code}</b> — need 2+ players</p>`;
+      : `<p class="ffa-hint">Share to invite — need 2+ players (code <b>${FFA.code}</b>)</p>`)
+      + shareRow;
     const b=$("ffaStart"); if(b) b.addEventListener("click", ()=> ffaSend({type:"m_begin"}));
   } else {
-    ctrl.innerHTML = `<p class="ffa-hint">Waiting for host to start… (code <b>${FFA.code}</b>)</p>`;
+    ctrl.innerHTML = `<p class="ffa-hint">Waiting for host to start… (code <b>${FFA.code}</b>)</p>` + shareRow;
   }
+  // wire share buttons
+  const cp=$("ffaCopyLink");
+  if(cp) cp.addEventListener("click", ()=>{
+    navigator.clipboard?.writeText(link).then(
+      ()=>{ cp.textContent="✓ Copied!"; setTimeout(()=>cp.textContent="🔗 Copy invite link", 1600); },
+      ()=> toast("Copy failed — long-press the code to share"));
+  });
+  const wa=$("ffaWhatsApp");
+  if(wa) wa.addEventListener("click", ()=>{
+    const msg = `Come battle me on GymOggle! 💪 Join my room:\n${link}`;
+    window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank");
+  });
   const share=$("ffaShare"); if(share) share.textContent = FFA.code||"";
+}
+
+function ffaShareLink(){
+  // a link that pre-fills the join code so a friend lands straight in
+  const base = location.origin + location.pathname;
+  return `${base}?join=${FFA.code||""}`;
 }
 
 /* a player cell: your own shows the camera; others show a colored gorilla */
@@ -286,7 +311,7 @@ function ffaOpenCreate(){
   show("ffa");
   $("ffaBar").style.display="none"; $("ffaResults").style.display="none";
   $("ffaCtrl").innerHTML=""; $("ffaStatus").textContent="";
-  const exs=[["squats","🏋️ Squats"],["pushups","💪 Push-ups"],["jacks","⭐ Jacks"],["plank","🧱 Plank"]];
+  const exs=[["squats","🏋️ Squats"],["pushups","💪 Push-ups"],["jacks","⭐ Jacks"],["skipping","🤸 Skipping"],["plank","🧱 Plank"]];
   $("ffaGrid").className="ffa-setup";
   $("ffaGrid").innerHTML=`
     <div class="ffa-setup-card">

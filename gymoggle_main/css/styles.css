@@ -671,3 +671,46 @@
 .btn.soon span{ position:absolute; right:14px; top:50%; transform:translateY(-50%);
   font-size:10px; letter-spacing:.14em; background:var(--void2); border:1px solid var(--line);
   color:var(--gold); padding:3px 8px; border-radius:20px; }
+
+/* ===================== BOTTOM NAVBAR ===================== */
+.navbar{ position:fixed; left:0; right:0; bottom:0; z-index:50; display:flex;
+  background:rgba(13,11,20,.92); border-top:1px solid var(--line); backdrop-filter:blur(12px);
+  padding:6px 4px calc(6px + env(safe-area-inset-bottom,0)); }
+.nav-item{ flex:1; display:flex; flex-direction:column; align-items:center; gap:2px;
+  background:none; border:none; cursor:pointer; padding:6px 2px; color:var(--dim);
+  font-size:11px; font-weight:700; font-family:inherit; letter-spacing:.02em; }
+.nav-item span{ font-size:20px; line-height:1; filter:grayscale(.4); opacity:.7; }
+.nav-item.on{ color:var(--you); } .nav-item.on span{ filter:none; opacity:1; }
+/* keep content clear of the fixed navbar */
+.screen{ padding-bottom:72px; }
+#game, #ffa, #jrun, #jcoach{ padding-bottom:0; }
+
+/* ===================== SHARE ROW (private rooms) ===================== */
+.ffa-share-row{ display:flex; gap:8px; margin-top:10px; }
+.btn.sm{ padding:10px 12px; font-size:13px; flex:1; }
+.btn.wa{ background:#25D366; color:#04180c; border:none; font-weight:800; border-radius:12px; cursor:pointer; }
+.btn.wa:hover{ filter:brightness(.95); }
+
+/* ===================== COMING SOON PAGE ===================== */
+.soon-intro{ color:var(--dim); font-size:15px; text-align:center; margin-bottom:6px; }
+.soon-card{ display:flex; gap:14px; align-items:flex-start; background:var(--void2);
+  border:1px solid var(--line); border-radius:14px; padding:16px; }
+.soon-ic{ font-size:30px; flex:none; }
+.soon-card b{ color:var(--bone); font-size:16px; } .soon-card p{ color:var(--dim); font-size:14px; margin-top:4px; line-height:1.5; }
+.soon-foot{ text-align:center; color:var(--gold); font-size:14px; margin-top:6px; }
+
+/* Find New Opponent button (quick-match results) */
+.again.findnew{ background:linear-gradient(100deg,var(--you),var(--gold)); color:var(--void); }
+.again.findnew:active{ transform:scale(.97); }
+.resbtns{ flex-wrap:wrap; justify-content:center; }
+
+/* ===================== MY STATS ===================== */
+.stats-hero{ display:flex; align-items:center; justify-content:space-between;
+  background:var(--void2); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:12px; }
+.stats-name{ font-family:"Anton"; font-size:22px; text-transform:uppercase; color:var(--bone); }
+.stats-coins{ font-family:"JetBrains Mono"; font-weight:800; color:var(--gold); font-size:18px; }
+.stats-sub{ font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--dim); margin:14px 0 8px; }
+.stats-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.stat-box{ background:var(--void2); border:1px solid var(--line); border-radius:12px; padding:14px 8px; text-align:center; }
+.stat-box b{ display:block; font-family:"JetBrains Mono"; font-weight:800; font-size:24px; color:var(--you); font-variant-numeric:tabular-nums; }
+.stat-box span{ font-size:11px; color:var(--dim); letter-spacing:.04em; }

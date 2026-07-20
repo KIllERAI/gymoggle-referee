@@ -43,6 +43,7 @@
         <button class="ex on" data-ex="squats">Squats</button>
         <button class="ex" data-ex="pushups">Push-ups</button>
         <button class="ex" data-ex="situps">Sit-ups</button>
+        <button class="ex" data-ex="skipping">🤸 Skip</button>
         <button class="ex" data-ex="jacks">Jacks</button>
         <button class="ex" data-ex="plank">🧱 Plank Chicken</button>
       </div>
@@ -166,6 +167,28 @@
     </div>
   </section>
 
+  <!-- ===== 🚧 COMING SOON ===== -->
+  <section id="soon" class="screen">
+    <div class="how-head">
+      <button class="j-back" id="soonBack">←</button>
+      <h2>Coming Soon</h2>
+    </div>
+    <div class="how-body">
+      <p class="soon-intro">We're just getting started. Here's what's in the works 👀</p>
+      <div class="soon-card"><div class="soon-ic">🗺️</div><div>
+        <b>30-Day Journey</b><p>A guided month-long fitness path — daily workouts that scale up week by week, with a Duolingo-style map. Built, polishing now.</p></div></div>
+      <div class="soon-card"><div class="soon-ic">🦍</div><div>
+        <b>Escape the Jungle</b><p>An endless-runner minigame powered by your real movement — jump and dodge your way out. In development.</p></div></div>
+      <div class="soon-card"><div class="soon-ic">🎙️</div><div>
+        <b>Voice chat</b><p>Talk trash live with your opponent during private battles. Coming soon.</p></div></div>
+      <div class="soon-card"><div class="soon-ic">🤸</div><div>
+        <b>More exercises</b><p>Skipping, pull-ups, and more — expanding the roster over time.</p></div></div>
+      <div class="soon-card"><div class="soon-ic">🤝</div><div>
+        <b>Co-op team battles</b><p>Team up 2-v-2 or bigger in Group Battle. On the roadmap.</p></div></div>
+      <p class="soon-foot">Got a suggestion? We're listening. 💪</p>
+    </div>
+  </section>
+
   <!-- ===== LEADERBOARD ===== -->
   <section id="board" class="screen">
     <div class="board-head">
@@ -175,6 +198,7 @@
     <div class="board-tabs">
       <button class="btab on" data-tab="scores">Top Scores</button>
       <button class="btab" data-tab="wins">Most Wins</button>
+      <button class="btab" data-tab="me">My Stats</button>
     </div>
     <div class="ex-filter" id="exFilter">
       <button class="bex on" data-bex="squats">Squats</button>
@@ -304,6 +328,7 @@
     <div class="verdict"><div class="big" id="verdict">—</div></div>
     <div class="resbtns">
       <button class="again" id="againBtn">Play again</button>
+      <button class="again findnew" id="findNewBtn">Find new opponent</button>
       <button class="exit" id="exitBtn">Exit</button>
     </div>
     <div class="rchat" id="rChatBox">
@@ -327,5 +352,13 @@
   <script src="js/multiplayer_ffa.js"></script>
   <script src="js/journey.js"></script>
   <!-- js/games/runner.js is PARKED — not loaded -->
+  <!-- ===== BOTTOM NAVBAR ===== -->
+  <nav id="navbar" class="navbar">
+    <button class="nav-item on" data-nav="landing"><span>🏠</span>Home</button>
+    <button class="nav-item" data-nav="daily"><span>📅</span>Daily</button>
+    <button class="nav-item" data-nav="board"><span>🏆</span>Ranks</button>
+    <button class="nav-item" data-nav="how"><span>❓</span>How</button>
+    <button class="nav-item" data-nav="soon"><span>🚧</span>Soon</button>
+  </nav>
 </body>
 </html>

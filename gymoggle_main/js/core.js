@@ -11,15 +11,23 @@ const HTTP_BASE = SERVER_URL.replace(/^ws/, "http");   // wss->https for REST ca
 const JOIN_CODE = (params.get("join") || "").toUpperCase().slice(0,4);
 
 const $ = id => document.getElementById(id);
-const screens = { landing:$("landing"), game:$("game"), results:$("results"), board:$("board"), daily:$("daily"), ffa:$("ffa"), journey:$("journey"), jday:$("jday"), jrun:$("jrun"), jcoach:$("jcoach"), how:$("how") };
-function show(name){ for(const k in screens) screens[k].classList.toggle("on", k===name); }
+const screens = { landing:$("landing"), game:$("game"), results:$("results"), board:$("board"), daily:$("daily"), ffa:$("ffa"), journey:$("journey"), jday:$("jday"), jrun:$("jrun"), jcoach:$("jcoach"), how:$("how"), soon:$("soon") };
+const NAV_HIDDEN = new Set(["game","ffa","jrun","jcoach"]);  // immersive screens hide the navbar
+function show(name){
+  for(const k in screens) screens[k].classList.toggle("on", k===name);
+  const nav=$("navbar");
+  if(nav){
+    nav.style.display = NAV_HIDDEN.has(name) ? "none" : "flex";
+    nav.querySelectorAll(".nav-item").forEach(b=> b.classList.toggle("on", b.dataset.nav===name));
+  }
+}
 
 const video=$("video"), overlay=$("overlay"), octx=overlay.getContext("2d");
 const youScoreEl=$("youScore"), oppScoreEl=$("oppScore");
 const clockEl=$("clock"), statusEl=$("status"), centerEl=$("center");
 
 const S = { me:null, myReps:0, oppReps:0, active:false, duration:60, startTs:0,
-            phase:"idle", winner:null, name:"You", intent:null, code:null, exercise:"squats", oppName:"Opponent" };
+            phase:"idle", winner:null, name:"You", intent:null, code:null, exercise:"squats", oppName:"Opponent", oppLeft:false };
 let chosenExercise = "squats";   // creator's pick on the landing screen
 let busy = false;                // true while a game is starting/active (blocks re-entry)
 
@@ -244,6 +252,20 @@ try{
 // best-effort: tell the server we're gone if the tab closes mid-game
 window.addEventListener("pagehide", ()=>{ try{ if(ws && ws.readyState===1) ws.send(JSON.stringify({type:"leave"})); }catch(e){} });
 
+/* ---------- navbar wiring ---------- */
+(function(){
+  const nav=$("navbar"); if(!nav) return;
+  nav.querySelectorAll(".nav-item").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const dest=b.dataset.nav;
+      if(dest==="daily" && typeof openDaily==="function") return openDaily();
+      if(dest==="board" && typeof openBoard==="function") return openBoard();
+      show(dest);
+    });
+  });
+  const sb=$("soonBack"); if(sb) sb.addEventListener("click", ()=> show("landing"));
+})();
+
 /* ---------- How to Play wiring ---------- */
 (function(){
   const b=$("howBtn"); if(b) b.addEventListener("click", ()=> show("how"));
@@ -255,9 +277,9 @@ window.addEventListener("pagehide", ()=>{ try{ if(ws && ws.readyState===1) ws.se
 function onAuthReady(){
   // name field defaults to the chosen username
   const nm = $("name"); if(nm && window.PNAME) nm.value = window.PNAME;
-  // arrived via a share link (?join=CODE)
-  if(JOIN_CODE && JOIN_CODE.length===4){
-    $("joinCode").value = JOIN_CODE;
+  // arrived via a share link (?join=CODE) -> jump straight into that room
+  if(JOIN_CODE && JOIN_CODE.length>=3){
     const note=$("challengeNote"); if(note) note.style.display="block";
+    if(typeof ffaJoin==="function"){ setTimeout(()=> ffaJoin(JOIN_CODE), 300); }
   }
 }

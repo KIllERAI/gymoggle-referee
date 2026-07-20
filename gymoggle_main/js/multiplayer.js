@@ -330,7 +330,7 @@ function startMatch(duration){
   S.duration=duration||60; S.startTs=performance.now()/1000;
   S.myReps=0; S.oppReps=0; lastSent=-1; lastSecond=-1;
   youScoreEl.textContent="0"; oppScoreEl.textContent="0";
-  S.phase="playing"; setStatus("Get ready"); setAgain("idle"); removeLeftNote(); resetPresence(); clearInterval(lobbyTimer); stopTips();
+  S.phase="playing"; S.oppLeft=false; setStatus("Get ready"); setAgain("idle"); removeLeftNote(); resetPresence(); clearInterval(lobbyTimer); stopTips();
   S.mode = isHold() ? "hold" : "reps";        // plank = hold, everything else = reps
   centerEl.innerHTML='<div class="box"><div class="vsflash">VS</div></div>';
   if(S.mode==="hold"){
@@ -389,6 +389,8 @@ function endMatch(winner){
   $("crownYou").textContent=iWon?"👑":"";
   $("crownOpp").textContent=(!iWon&&!tie)?"👑":"";
   setAgain("idle");
+  // "Find new opponent" only makes sense for random quick-match, not private rooms
+  const fn=$("findNewBtn"); if(fn) fn.style.display = (S.intent==="quick") ? "block" : "none";
   const rc=$("rChat"); if(rc) rc.innerHTML="";
   show("results");
   // juice: count the scores up, play a sting, throw confetti for a win
@@ -451,13 +453,14 @@ function setAgain(mode){
 function removeLeftNote(){ const n=$("leftNote"); if(n) n.remove(); }
 function opponentLeft(){
   stopBeat(); $("exBanner").classList.remove("on"); showPresence(false); S.active=false;
+  S.oppLeft = true;                     // Play Again will now auto-shift to Find New
   toast("Your rival left the game.");
   if(screens.results.classList.contains("on")){
-    // stay on the results screen, but make it obvious the rematch is off
-    setAgain("left");
+    // opponent left while on results -> turn "Play again" into a find-new prompt
+    const b=$("againBtn"); if(b){ b.disabled=false; b.classList.remove("accept"); b.textContent="Find new opponent"; }
     if(!$("leftNote")){
       const n=document.createElement("div");
-      n.id="leftNote"; n.className="leftnote"; n.textContent="Opponent left — no rematch";
+      n.id="leftNote"; n.className="leftnote"; n.textContent="Opponent left — find a new one";
       $("results").appendChild(n);
     }
   } else {
@@ -528,11 +531,24 @@ $("findBtn").addEventListener("click", ()=> enterGame("quick", null));
 // internally / for rematch), just no longer bound to those landing buttons.
 $("joinCode").addEventListener("input", e=>{ e.target.value=e.target.value.toUpperCase(); });
 $("againBtn").addEventListener("click", ()=>{
+  // if the opponent already left, "Play again" makes no sense -> find a new one
+  if(S.oppLeft){ findNewOpponent(); return; }
   // works both as "request rematch" and "accept opponent's rematch"
   if(ws && ws.readyState===1) ws.send(JSON.stringify({type:"rematch"}));
   setAgain("pending");
 });
+$("findNewBtn").addEventListener("click", ()=> findNewOpponent());
 $("exitBtn").addEventListener("click", ()=> backToLanding());
+
+// leave the current room and immediately queue for a fresh quick-match opponent
+function findNewOpponent(){
+  removeLeftNote();
+  try{ if(ws && ws.readyState===1) ws.send(JSON.stringify({type:"leave"})); }catch(e){}
+  S.oppLeft=false;
+  // reset match state, then re-enter the quick-match queue (bots fill after ~18s)
+  busy=false; S.phase="idle"; S.me=null; S.code=null; S.intent=null;
+  enterGame("quick", null);
+}
 
 /* post-match chat (results screen) — shares the same relay as the lobby chat */
 (function wireResultsChat(){
